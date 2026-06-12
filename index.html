@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.02  ·  파일명: Index_Rev302
+  Release Version 3.03  ·  파일명: Index_Rev303
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -90,6 +90,9 @@
   - Rev302 : 로그아웃 버튼을 내보내기/가져오기와 같은 음영 배경(.ghost)으로
              통일하고 가로 한 줄 꽉 채움. .btn.block은 폭/여백만 담당하도록
              정리(배경·글자색은 함께 붙는 .ghost 등이 결정).
+  - Rev303 : 시작 화면을 'DinoPlan' 로고 스플래시로 변경(기존 '불러오는 중…'
+             대체). 최소 0.8초 표시 후 0.4초 페이드아웃(로딩이 빨라도 깜빡임
+             없음, 느려도 자연스럽게 전환). hideSplash로 숨김 로직 일원화.
   ============================================
 -->
 <html lang="ko">
@@ -524,13 +527,18 @@
   .gsi-btn svg { width: 18px; height: 18px; }
   #authGate .auth-hint { font-size: 12px; color: var(--text-3); max-width: 280px; line-height: 1.5; }
 
-  /* 로그인 상태를 확인하는 짧은 동안 보여줄 스플래시 */
+  /* 시작 스플래시 — 앱 켜질 때 DinoPlan 로고를 잠깐 보여준다.
+     준비되면 .hide로 부드럽게 사라진다(최소 표시 시간은 JS가 보장). */
   #authSplash {
     position: fixed; inset: 0; z-index: 101;
     display: flex; align-items: center; justify-content: center;
-    background: var(--bg); color: var(--text-3); font-size: 14px;
+    background: var(--bg); color: var(--text);
+    opacity: 1; transition: opacity 0.4s ease;
   }
-  #authSplash.hide { display: none; }
+  #authSplash .splash-brand {
+    font-size: 30px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  #authSplash.hide { opacity: 0; pointer-events: none; }
 
   /* 로그인 확인 전에는 캘린더 본체를 가린다 (인증 후 .ready로 해제) */
   #app { visibility: hidden; }
@@ -699,7 +707,7 @@
 <!-- ===== 로그인 게이트 (3.0) =====
      authSplash : 로그인 상태를 확인하는 찰나에 잠깐 보이는 화면
      authGate   : 로그인 안 된 사용자에게 보이는 구글 로그인 화면 -->
-<div id="authSplash">불러오는 중…</div>
+<div id="authSplash"><div class="splash-brand">DinoPlan</div></div>
 
 <div id="authGate">
   <div class="brand">DinoPlan</div>
@@ -1843,14 +1851,27 @@ function whenCloudReady(fn) {
   else { document.addEventListener('cloud-ready', fn, { once: true }); }
 }
 
+// 스플래시 숨김 — 앱 시작 후 최소 표시 시간(SPLASH_MIN_MS)을 보장한 뒤
+// 부드럽게 사라지게 한다. 로딩이 더 빨라도 로고가 깜빡이지 않도록.
+const SPLASH_MIN_MS = 800;
+const _splashStart = Date.now();
+let _splashHidden = false;
+function hideSplash() {
+  if (_splashHidden) return;
+  _splashHidden = true;
+  const elapsed = Date.now() - _splashStart;
+  const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
+  setTimeout(() => { $('authSplash').classList.add('hide'); }, wait);
+}
+
 // 화면 전환: 로그인 게이트 ↔ 캘린더
 function showAuthGate() {
-  $('authSplash').classList.add('hide');
+  hideSplash();
   $('authGate').classList.add('show');
   $('app').classList.remove('ready');
 }
 function showCalendar() {
-  $('authSplash').classList.add('hide');
+  hideSplash();
   $('authGate').classList.remove('show');
   $('app').classList.add('ready');
 }
