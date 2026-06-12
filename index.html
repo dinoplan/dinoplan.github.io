@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 2.04  ·  파일명: Index_Rev204
+  Release Version 2.07  ·  파일명: Index_Rev207
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -64,6 +64,12 @@
              막대 라벨·주말 코너 일정에 --ev-weight 변수 적용.
   - Rev204 : 주말(토/일) 코너에 쌓이는 일정(주요/개인/휴일)을 가로 가운데
              정렬로 변경. .wevs에 align-items:center, .we-ev에 text-align:center.
+  - Rev205 : 일정 상세 시트에서 왼쪽 색 동그라미 제거. 대신 제목 글자색을
+             종류별로 구분(업무=검정, 중요=파랑, 개인=초록, 휴일=빨강).
+  - Rev206 : 상세 시트 제목 볼드 제거(전 종류 보통 굵기). 색으로만 구분.
+             기간·메모(부가 내용)는 기존 회색 유지.
+  - Rev207 : 상세 시트의 기간·메모(부가 내용)도 종류색으로 통일.
+             제목보다 살짝 흐리게(opacity 0.7)로 위계 유지.
   ============================================
 -->
 <html lang="ko">
@@ -1089,13 +1095,15 @@ function openDay(d) {
       const row = document.createElement('div');
       row.className = 'day-ev';
       const range = (e.start !== e.end) ? fmtRange(e) : '';
-      row.innerHTML = '<div class="dot"></div><div class="info"><div class="t"></div>'+
+      row.innerHTML = '<div class="info"><div class="t"></div>'+
         (range?'<div class="sub range"></div>':'')+
         (e.memo?'<div class="sub memo"></div>':'')+'</div>';
-      row.querySelector('.dot').style.background = evTextColor(e);
-      row.querySelector('.t').textContent = e.title;
-      if (range) row.querySelector('.range').textContent = range;
-      if (e.memo) row.querySelector('.memo').textContent = e.memo;
+      const titleEl = row.querySelector('.t');
+      titleEl.textContent = e.title;
+      const tcol = evTextColor(e);
+      titleEl.style.color = tcol;
+      if (range) { const r = row.querySelector('.range'); r.textContent = range; r.style.color = tcol; r.style.opacity = '0.7'; }
+      if (e.memo) { const m = row.querySelector('.memo'); m.textContent = e.memo; m.style.color = tcol; m.style.opacity = '0.7'; }
       row.addEventListener('click', () => openEdit(e));
       wrap.appendChild(row);
     });
