@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<!--
+  업무 캘린더 (Work Calendar)
+  ============================================
+  Release Version 2.02  ·  파일명: Index_Rev202
+  ============================================
+  [버전 이력]
+  - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
+             자동 조절. 음성 입력, 자동·수동 백업, 일정 종류별 색,
+             2026 공휴일, 다크모드 포함한 정식 출시 버전.
+  - Rev101 : 일정 검색 추가(제목·내용 동시 검색, 최신순 정렬, 검색어 형광펜).
+             검색 결과 → 상세 수정 후 '뒤로'(화면 버튼 + 폰 뒤로가기)로
+             검색 목록 복귀. 메모 입력칸 높이 확대. 모든 시트 높이를 화면의
+             72%로 제한해 위쪽 달력(요일·1주차)이 항상 보이도록 함. 날짜별
+             일정 목록에서 메모 전체 표시. 설정창 닫기 버튼 제거(뒷배경 탭으로
+             닫힘). 백업 내보내기/가져오기 버튼 가로 2칸 배치. 키보드가 올라온
+             상태에서 시트 드래그 시 뒤 달력이 떨리던 현상(스크롤 체이닝) 차단.
+  - Rev102 : 업무(work) 종류는 하루짜리 일정도 배경 음영(파스텔 색)이
+             적용되도록 변경. 일정 추가/수정 시 업무는 하루/여러날 모두
+             배경색 선택 가능. 중요·휴일·개인 종류는 기존대로 음영 없음.
+  - Rev103 : 우하단 새일정(+) 버튼을 헤더 설정 옆으로 이동(설정과 같은 크기).
+             헤더에 개인일정 표시/숨김 토글 추가 — 끄면 달력에서 개인일정이
+             감춰지고(날짜를 누르면 상세에선 보임) 칸에 여유가 생김. 설정값은
+             기기에 저장돼 다음에도 유지. 시작일이 주말(토/일)이면 '업무'
+             종류를 막고 '중요일정'으로 자동 전환하며 "주말에는 업무 일정을
+             설정할 수 없습니다" 안내 표시.
+  - Rev104 : 새 업무 일정 추가 시, 그 달에 이미 쓰인 배경색을 피해 아직 안
+             쓰인 색을 기본값으로 자동 지정(c0부터 순서대로). 달을 걸친
+             일정은 양쪽 달 모두에서 쓰인 것으로 계산. 9색이 모두 쓰였으면
+             c0부터 다시 순환. (수정 시에는 기존 색 유지)
+  - Rev105 : 키보드가 올라올 때 입력 중 시트가 미세하게 출렁이던 떨림 제거
+             (visualViewport scroll 보정 제거, 키보드 높이 변동 4px 미만 무시,
+             스크롤 보정은 즉시·1회만). 메모(textarea)처럼 시트 안에서 자체
+             스크롤되는 영역을 만질 때는 그쪽 스크롤을 우선하고, 끝에 닿았을
+             때만 시트로 전달되도록 터치 가드 개선(메모 스크롤 중 시트가 통째로
+             움직이던 충돌 해결).
+  - Rev106 : 배경색 팔레트를 '캔디' 테마로 교체(분홍·주황·노랑·초록·하늘·
+             파랑·보라·핑크·회색). 기존보다 채도를 높여 9색 구분을 또렷하게 함.
+             (JS PALETTE와 색 선택 스와치 CSS 동시 적용)
+  - Rev107 : 같은 칸에 여러 일정이 겹칠 때 막대 쌓이는 순서를 종류 우선순위로
+             정렬(휴일 > 중요 > 업무 > 개인). 우선순위 높은 종류가 위쪽 줄에
+             표시됨. (공휴일 이름은 기존대로 항상 최상단)
+  - Rev108 : 요일 헤더 정리 — 월~금을 날짜보다 약간 진한 회색+볼드로, '주말'
+             칸을 '토 / 일'로 분리(토=파랑, 슬래시=볼드 회색, 일=빨강)하고 월~금과
+             세로 정렬을 맞춤. 오늘 표시 개선 — 평일 오늘은 동그라미를 빼고 날짜를
+             쨍한 파랑(#1a73e8)으로 + 연한 쨍파랑 음영을 깔아 기간 막대와 겹치지
+             않게 함. 주말 오늘은 업무 음영이 올 일이 없어 쨍파랑 동그라미로 표시.
+             라이트/다크 모드 각각 색 보정. (오늘이 주말일 때 표시 누락도 해결)
+  - Rev200 : 클라우드 동기화 1차 (메이저 2.00). Firebase(Firestore) 연동.
+             폰 저장(localStorage)은 그대로 두고, save() 시 클라우드
+             (calendars/shared 문서 한 칸)에 일정 전체를 통째로 올림. 앱 켜질 때
+             클라우드 변화를 실시간 수신하여 화면에 반영(PC-폰 연동). load() 및
+             기존 기능 로직은 건드리지 않음. ※ 현재 DB는 테스트 모드 — 본인 기기
+             연동용까지만, 파트원 배포는 로그인(예정) 이후.
+  - Rev201 : 우상단 직전달 토/일 코너의 일정 제목을 6글자까지만 표시하고
+             넘으면 …을 붙여 항상 7칸으로 고정(너무 길어 보이던 현상 해결).
+             제목이 짧아진 만큼 코너 칸 너비도 30vw→25vw(220→180px)로 축소.
+             좁아진 칸에 맞춰 코너 일정 글자 크기 미세 조정.
+  - Rev202 : '오늘' 표시 색을 파랑→밝은 민트로 변경(토/일 색과 겹침 해결).
+             평일 오늘은 연한 민트 음영+청록 글자, 주말 오늘은 진한 민트
+             동그라미+흰 숫자. 볼드 제거(촌스러움).
+  ============================================
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="업무캘린더">
+<title>업무 캘린더</title>
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%EC%97%85%EB%AC%B4%20%EC%BA%98%EB%A6%B0%EB%8D%94%22%2C%22short_name%22%3A%22%EC%BA%98%EB%A6%B0%EB%8D%94%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%23ffffff%22%7D">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f5f1;
+    --line: rgba(0,0,0,0.10);
+    --line-strong: rgba(0,0,0,0.18);
+    --text: #2c2c2a;
+    --text-2: #5f5e5a;
+    --text-3: #b4b2a9;
+    --dow-text: #4a4946;
+    --sat: #2563a8;
+    --sun: #c0392b;
+    --accent: #2563a8;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --surface: #2a2a27;
+      --line: rgba(255,255,255,0.38);
+      --line-strong: rgba(255,255,255,0.48);
+      --text: #ededea;
+      --text-2: #b4b2a9;
+      --text-3: #6f6e68;
+      --dow-text: #d6d4cf;
+      --sat: #6fa8e0;
+      --sun: #e88;
+      --accent: #6fa8e0;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    overscroll-behavior: none;
+  }
+  body.sheet-open #app { overflow: hidden; }
+  body.sheet-open .grid { pointer-events: none; }
+  /* 시트(설정/검색/일정추가 등)가 열려 키보드가 올라올 때, 뒤 달력 전체가
+     밀리거나 확대되지 않도록 html/body 자체를 고정한다 */
+  html.sheet-open, body.sheet-open {
+    position: fixed; left: 0; right: 0; top: 0; bottom: 0;
+    width: 100%; height: 100%; overflow: hidden;
+    overscroll-behavior: none; touch-action: none;
+  }
+  #app {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px 6px;
+  }
+  .head-actions { display: flex; align-items: center; gap: 2px; }
+  .head-btn {
+    background: transparent; border: none; color: var(--text-2); cursor: pointer;
+    padding: 5px; line-height: 0; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .head-btn:active { background: var(--surface); }
+  /* 개인일정 숨김(off) 상태: 토글 버튼을 흐리게 + 빗금 느낌으로 표시 */
+  .head-btn#personalToggle { color: #1d9e75; }
+  .head-btn#personalToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#personalToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  @media (prefers-color-scheme: dark) { .head-btn#personalToggle { color: #5fd3a8; } }
+  .title-btn {
+    display: flex; align-items: center; gap: 6px; background: transparent; border: none;
+    color: var(--text); font-size: 21px; font-weight: 600; cursor: pointer;
+    padding: 4px 2px; font-family: inherit;
+  }
+  .title-btn .caret { font-size: 13px; color: var(--text-2); }
+  .title-btn:active { opacity: .7; }
+  .nav { display: flex; gap: 6px; }
+  .nav button, .today-btn {
+    border: 0.5px solid var(--line-strong); background: transparent; color: var(--text);
+    border-radius: 10px; width: 38px; height: 34px; font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .today-btn { width: auto; padding: 0 12px; font-size: 13px; white-space: nowrap; }
+  .nav button:active, .today-btn:active { background: var(--surface); }
+
+  .picker {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    transform: translateY(100%); transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    padding: 8px 0 calc(18px + env(safe-area-inset-bottom));
+  }
+  .picker.open { transform: translateY(0); }
+  .picker-cols { display: flex; height: 240px; }
+  .picker-col { flex: 1; overflow-y: auto; text-align: center; }
+  .picker-col .opt {
+    padding: 13px 0; font-size: 18px; color: var(--text-3); cursor: pointer;
+  }
+  .picker-col .opt.sel { color: var(--text); font-weight: 700; font-size: 20px; }
+  .picker-col .opt:active { background: var(--surface); }
+
+  .dow {
+    display: grid; grid-template-columns: repeat(5, 1fr) 0.8fr;
+    padding: 56px 8px 4px;
+    align-items: center;
+    overflow: visible;
+  }
+  .dow span {
+    text-align: center; font-size: 13px; color: var(--dow-text); font-weight: 600; padding: 2px 0;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .dow .we { position: relative; }
+  .dow .we .wsat { color: var(--sat); }
+  .dow .we .wsun { color: var(--sun); }
+  .dow .we .wslash { color: var(--dow-text); font-weight: 700; padding: 0 3px; }
+  .corner {
+    position: absolute; right: 0; top: -56px; display: flex; flex-direction: column;
+    gap: 0; width: 25vw; max-width: 180px;
+    font-weight: 400; line-height: 1;
+  }
+  .corner-row {
+    display: flex; align-items: center; gap: 4px; cursor: pointer;
+    padding: 2px 2px 3px; border-bottom: 0.5px solid var(--line);
+    min-height: 15px;
+    width: 100%; min-width: 0; box-sizing: border-box;
+  }
+  .corner-row .cdate { flex: none; font-size: 13px; font-weight: 400 !important; }
+  .corner-row.sat .cdate { color: var(--sat); opacity: 0.5; }
+  .corner-row.sun .cdate { color: var(--sun); opacity: 0.5; }
+  .corner-ev {
+    display: block !important; flex: 1 1 0; min-width: 0;
+    font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 5.8), 15px) !important; font-weight: 400 !important; opacity: 0.5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .grid { flex: 1; display: flex; flex-direction: column; padding: 0 8px 8px; min-height: 0; }
+  .week { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr) 0.8fr; gap: 1px; min-height: 0; position: relative; overflow: hidden; }
+  .cell {
+    border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+    padding: 3px 3px 0;
+    overflow: hidden; cursor: pointer; min-width: 0; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .week .cell:first-child { border-left: none; }
+  .week:last-child .cell { border-bottom: 1px solid var(--line); }
+  .cell.other .dnum { color: var(--text-3); }
+  .dnum { font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .dnum.sat { color: var(--sat); }
+  .dnum.sun { color: var(--sun); }
+  .dnum.holiday { color: var(--sun); }
+  .holiday-name {
+    font-size: clamp(7px, calc(var(--cellw, 60px) / 8.2), 15px); font-weight: 700; color: var(--sun);
+    line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px; text-align: center; padding: 0 4px; box-sizing: border-box;
+  }
+  .cell.today { background: rgba(64,224,208,0.18); }
+  .cell.today .dnum { font-weight: 400; color: #0d9488; }
+  @media (prefers-color-scheme: dark) {
+    .cell.today { background: rgba(80,230,215,0.14); }
+    .cell.today .dnum { color: #5eead4; }
+    .we-half.we-today .wd { background: #14b8a6; }
+  }
+  .we-nums { font-size: 10px; }
+  .we-nums .s1 { color: var(--sat); }
+  .we-nums .s2 { color: var(--sun); }
+  .we-nums .cm { color: var(--text-3); }
+  .cell.other .we-nums .s1, .cell.other .we-nums .s2 { color: var(--text-3); }
+
+  /* split weekend cell: Saturday top, Sunday bottom */
+  .cell.weekend { padding: 0; }
+  .we-half {
+    flex: 1; min-height: 0; padding: 3px 2px; position: relative;
+    display: flex; flex-direction: column; cursor: pointer; overflow: hidden;
+  }
+  .we-half.top { border-bottom: 1px solid var(--line); background: rgba(37,99,168,0.06); }
+  .we-half.bot { background: rgba(192,57,43,0.06); }
+  .we-half .wd { font-size: 13px; line-height: 1.3; }
+  .we-half.top .wd { color: var(--sat); }
+  .we-half.bot .wd { color: var(--sun); }
+  .cell.weekend.other .we-half.top .wd { color: var(--sat); opacity: 0.45; }
+  .cell.weekend.other .we-half.bot .wd { color: var(--sun); opacity: 0.45; }
+  .we-half .wd.wd-holiday { color: var(--sun) !important; }
+  /* 오늘이 주말일 때: 업무 음영이 올 일 없으므로 동그라미로 표시(볼드 없음) */
+  .we-half.we-today .wd {
+    background: #14b8a6; color: #fff; border-radius: 50%; font-weight: 400;
+    width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; align-self: flex-start;
+  }
+  .we-half .wevs { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; overflow: hidden; }
+  .we-ev {
+    font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 6.2), 15px); line-height: 1.3; font-weight: 700;
+    color: #e23b3b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  @media (prefers-color-scheme: dark) { .we-ev { color: #ff7676; } }
+  .we-more { font-size: 9px; color: var(--text-3); }
+
+  .events { margin-top: 2px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .ev {
+    font-size: 10px; line-height: 1.3; border-radius: 3px; padding: 1px 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ev.c0 { background: rgba(37,99,168,0.16); color: var(--sat); }
+  .ev.c1 { background: rgba(186,117,23,0.18); color: #9a5f12; }
+  .ev.c2 { background: rgba(29,158,117,0.18); color: #0f6e56; }
+  .ev.c3 { background: rgba(212,83,126,0.16); color: #993556; }
+  @media (prefers-color-scheme: dark) {
+    .ev.c1 { color: #f0b766; }
+    .ev.c2 { color: #6fd0ac; }
+    .ev.c3 { color: #ee9; }
+  }
+  .ev.span-mid, .ev.span-start { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .ev.span-mid, .ev.span-end { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -3px; }
+  .ev.span-mid { margin-right: -3px; }
+  .ev.span-start { margin-right: -3px; }
+  .more { font-size: 9px; color: var(--text-3); padding-left: 4px; }
+
+  /* multi-day / single bars laid over the week */
+  .barlayer { position: absolute; left: 0; right: 0; top: 20px; bottom: 2px; pointer-events: none; }
+  .bar {
+    position: absolute; height: 16px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; cursor: pointer; overflow: hidden;
+    padding: 0 5px;
+  }
+  .bar .lbl {
+    font-size: clamp(7px, calc(var(--cellw, 60px) / 7.8), 16px); line-height: 1; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0;
+    font-weight: 700; padding: 0;
+  }
+  .bar.holiday-bar .lbl { color: var(--sun); }
+  /* line that fills the space between the label and the arrowhead */
+  .bar .line { flex: 1 1 2px; height: 0; border-top: 1.5px solid currentColor; min-width: 0; }
+  /* arrowhead drawn as a CSS triangle, sitting flush on the line */
+  .bar .head { flex: 0 0 auto; width: 0; height: 0; }
+  .bar .head.l {
+    border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+    border-right: 5px solid currentColor;
+  }
+  .bar .head.r {
+    border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+    border-left: 5px solid currentColor;
+  }
+  .bar.c0 { background: rgba(37,99,168,0.18); }
+  .bar.c1 { background: rgba(186,117,23,0.20); }
+  .bar.c2 { background: rgba(29,158,117,0.20); }
+  .bar.c3 { background: rgba(212,83,126,0.18); }
+  .bar { color: #1a1a1a; }
+  @media (prefers-color-scheme: dark) {
+    .bar { color: #f2f2f2; }
+  }
+  .bar.cont-l { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  .bar.cont-r { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+  /* sheet */
+  .scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 10;
+  }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    transform: translateY(100%); transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    padding: 4px 18px calc(14px + env(safe-area-inset-bottom));
+    /* 시트가 화면을 꽉 덮지 않도록 위쪽 공간을 항상 남긴다.
+       (요일줄 + 1주차 첫 줄이 보여서, 그 부분을 탭해 달력으로 바로 나갈 수 있음)
+       내용이 이보다 길면 시트 안에서 스크롤된다. */
+    max-height: 72dvh; overflow-y: auto;
+    overscroll-behavior: contain; /* 시트 스크롤이 끝에 닿아도 뒤 달력으로 전달되지 않게 */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y; /* 시트 안에서는 세로 스크롤만, 가로/뒤로 전달 방지 */
+    /* 키보드가 올라오면 시트 자체를 점프시키지 않고, 아래쪽에 키보드 높이만큼
+       여백(padding)만 확보한다. 시트는 바닥에 고정돼 있어 들썩이지 않는다 */
+    padding-bottom: calc(14px + env(safe-area-inset-bottom) + var(--kb, 0px));
+  }
+  .sheet.open { transform: translateY(0); }
+  .grab { width: 38px; height: 4px; background: var(--line-strong); border-radius: 99px; margin: 4px auto 8px; }
+  .sheet h2 { font-size: 17px; font-weight: 600; margin: 0 0 10px; }
+  .edit-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .edit-head h2 { margin: 0 0 10px; }
+  .back-btn {
+    display: none; align-items: center; gap: 3px; margin: 0 0 10px;
+    background: var(--surface); border: 0.5px solid var(--line-strong); color: var(--text);
+    border-radius: 10px; padding: 6px 11px 6px 8px; font-size: 13px; font-weight: 700;
+    font-family: inherit; cursor: pointer; line-height: 1;
+  }
+  .back-btn svg { display: block; }
+  .back-btn:active { opacity: .7; }
+  .edit-head.from-search .back-btn { display: flex; }
+  .day-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .day-ev {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--surface); border-radius: 10px; cursor: pointer;
+  }
+  .day-ev .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.c0 { background: var(--sat); } .dot.c1 { background: #ba7517; }
+  .dot.c2 { background: #1d9e75; } .dot.c3 { background: #d4537e; }
+  .day-ev .info { flex: 1; min-width: 0; }
+  .day-ev .t { font-size: 14px; }
+  .day-ev .sub { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+  .day-ev .sub.memo {
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .empty { font-size: 13px; color: var(--text-3); text-align: center; padding: 16px 0; }
+
+  /* search result list */
+  .search-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .sr-item {
+    padding: 12px 14px; background: var(--surface); border-radius: 10px; cursor: pointer;
+  }
+  .sr-item:active { opacity: .8; }
+  .sr-line { font-size: 13px; line-height: 1.5; }
+  .sr-line .k { color: var(--text-3); font-weight: 700; }
+  .sr-date { color: var(--text-2); }
+  .sr-title { color: var(--text); font-weight: 700; font-size: 15px; margin: 2px 0; }
+  .sr-memo { color: var(--text-2); white-space: pre-wrap; word-break: break-word; }
+  .sr-hl { background: rgba(255,213,0,0.45); border-radius: 2px; padding: 0 1px; }
+  @media (prefers-color-scheme: dark) { .sr-hl { background: rgba(255,213,0,0.30); color: #fff; } }
+
+  label { display: block; font-size: 12px; color: var(--text); font-weight: 700; margin: 9px 0 4px; }
+  input[type=text], input[type=date], textarea {
+    width: 100%; border: 0.5px solid var(--line-strong); background: var(--bg); color: var(--text);
+    border-radius: 10px; padding: 9px 12px; font-size: 15px; font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 120px; }
+  .input-mic { position: relative; }
+  .input-mic input, .input-mic textarea { padding-right: 44px; }
+  .mic-btn {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border: none; background: var(--surface);
+    border-radius: 50%; cursor: pointer; line-height: 0; color: var(--text-2);
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .mic-btn.area { top: 8px; transform: none; }
+  .mic-btn:active { background: var(--line-strong); }
+  .mic-btn.listening { background: #e23b3b; color: #fff; animation: micpulse 1s ease-in-out infinite; }
+  @keyframes micpulse { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+
+  /* 검색 버튼(돋보기)은 항상 표시 */
+  .search-wrap input { padding-right: 44px; }
+
+  /* 백업 버튼 가로 2칸 배치 */
+  .backup-row { display: flex; gap: 10px; margin-top: 6px; }
+  .backup-row .btn { flex: 1; }
+  .types { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .type-chip {
+    border: 1px solid var(--line-strong); background: var(--bg); color: var(--text);
+    border-radius: 18px; padding: 7px 14px; font-size: 13px; font-family: inherit;
+    font-weight: 700; cursor: pointer;
+  }
+  .type-chip[data-t=work].sel { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+  .type-chip[data-t=important].sel { background:#2563a8; color:#fff; border-color:#2563a8; }
+  .type-chip[data-t=holiday].sel { background:#d63a3a; color:#fff; border-color:#d63a3a; }
+  .type-chip[data-t=personal].sel { background:#1d9e75; color:#fff; border-color:#1d9e75; }
+  .type-chip.chip-disabled { opacity: 0.35; pointer-events: none; }
+  #weekendHint { display: none; }
+  #weekendHint.show { display: block; }
+  .colors { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 6px; }
+  .colors .sw {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .colors .sw.sel { border-color: var(--text); }
+  .colors.disabled { opacity: 0.35; pointer-events: none; }
+  .colors-hint { font-size: 11px; color: var(--text-3); margin-top: 6px; display: none; }
+  .colors-hint.show { display: block; }
+  .sw[data-c="0"]{background:#ff8fa3;} .sw[data-c="1"]{background:#ffb56b;}
+  .sw[data-c="2"]{background:#ffe66d;} .sw[data-c="3"]{background:#8fe388;}
+  .sw[data-c="4"]{background:#5ad2f4;} .sw[data-c="5"]{background:#6c9bff;}
+  .sw[data-c="6"]{background:#b388ff;} .sw[data-c="7"]{background:#ff7ec7;}
+  .sw[data-c="8"]{background:#c0c0c8;}
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+  .btn.block {
+    display: block; width: 100%; margin-top: 10px; padding: 13px;
+    border: 1px solid var(--line-strong); background: var(--bg); color: var(--text);
+    border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .btn.block:active { background: var(--surface); }
+  .set-row { font-size: 14px; color: var(--text-2); margin: 6px 0 12px; }
+  .set-hint { font-size: 12px; color: var(--text-3); margin-top: 12px; line-height: 1.5; }
+  .btn {
+    flex: 1; border: none; border-radius: 11px; padding: 13px; font-size: 15px;
+    font-family: inherit; cursor: pointer; font-weight: 500;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost { background: var(--surface); color: var(--text); }
+  .btn.danger { background: transparent; color: var(--sun); border: 0.5px solid var(--line-strong); }
+  .btn:active { opacity: .85; }
+</style>
+
+<!-- ===== Firebase 클라우드 동기화 ===== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  // schedit 프로젝트 설정값
+  const firebaseConfig = {
+    apiKey: "AIzaSyBJg8UBUmw75m2_w5IGFUoEBSkY7II4xQ0",
+    authDomain: "schedit-1999e.firebaseapp.com",
+    projectId: "schedit-1999e",
+    storageBucket: "schedit-1999e.firebasestorage.app",
+    messagingSenderId: "650966539543",
+    appId: "1:650966539543:web:726d071d4dd259bd5f6b52"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // 일정 전체를 문서 하나에 통째로 저장 (A 방식)
+  // 컬렉션 'calendars', 문서 'shared' 한 칸에 events 배열 전체를 넣음
+  const DOC_REF = doc(db, 'calendars', 'shared');
+
+  // 방금 내가 올린 내용인지 기억 (메아리 방지)
+  let _lastPushedJson = null;
+
+  // 클라우드에 통째로 올리기 (save에서 호출)
+  window.cloudSave = async function(events) {
+    try {
+      const json = JSON.stringify(events);
+      _lastPushedJson = json;
+      await setDoc(DOC_REF, { events, at: Date.now() });
+    } catch (e) {
+      console.warn('cloudSave 실패:', e);
+    }
+  };
+
+  // 클라우드 변화를 실시간으로 받아 화면에 반영 (앱 켜질 때 1회 등록)
+  window.cloudListen = function() {
+    onSnapshot(DOC_REF, (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const incoming = Array.isArray(data.events) ? data.events : [];
+      const incomingJson = JSON.stringify(incoming);
+      // 방금 내가 올린 것이 메아리쳐 돌아온 경우는 무시 (화면 깜빡임 방지)
+      if (incomingJson === _lastPushedJson) return;
+      if (typeof window.onCloudData === 'function') {
+        window.onCloudData(incoming);
+      }
+    }, (err) => {
+      console.warn('cloudListen 오류:', err);
+    });
+  };
+
+  // 본문 스크립트가 "연결 준비됨"을 기다릴 수 있게 신호
+  window.cloudReady = true;
+  document.dispatchEvent(new Event('cloud-ready'));
+</script>
+<!-- ===== /Firebase ===== -->
+
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="title-btn" id="titleBtn">
+      <span id="ymLabel"></span><span class="caret">▾</span>
+    </button>
+    <div class="head-actions">
+      <button class="head-btn" id="personalToggle" aria-label="개인일정 표시 전환" title="개인일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+      <button class="head-btn" id="addBtn" aria-label="새 일정 추가" title="새 일정">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="head-btn" id="settingsBtn" aria-label="설정"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    </div>
+  </header>
+  <div class="dow">
+    <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="we"><span class="wsat">토</span><span class="wslash"> / </span><span class="wsun">일</span><span class="corner" id="cornerDates"></span></span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- year/month picker -->
+<div class="scrim" id="pickerScrim"></div>
+<div class="picker" id="picker">
+  <div class="grab"></div>
+  <div class="picker-cols">
+    <div class="picker-col" id="yearCol"></div>
+    <div class="picker-col" id="monthCol"></div>
+  </div>
+</div>
+
+<!-- settings / backup sheet (scrim 뒤로 이동됨) -->
+
+<div class="scrim" id="scrim"></div>
+
+<!-- settings / backup sheet -->
+<div class="sheet" id="settingsSheet">
+  <div class="grab"></div>
+  <h2>설정 · 백업</h2>
+  <div class="set-row"><span id="evCount">일정 0개</span></div>
+  <label>일정 검색</label>
+  <div class="input-mic search-wrap">
+    <input type="text" id="searchInput" placeholder="제목·내용에서 검색 (예: tel)" autocomplete="off" enterkeyhint="search" />
+    <button type="button" class="mic-btn search-go" id="searchBtn" aria-label="검색"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+  </div>
+  <label>데이터 백업</label>
+  <div class="backup-row">
+    <button class="btn ghost" id="exportBtn">내보내기</button>
+    <button class="btn ghost" id="importBtn">가져오기</button>
+  </div>
+  <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
+  <div class="set-hint" id="backupInfo"></div>
+</div>
+
+<!-- search result sheet -->
+<div class="sheet" id="searchSheet">
+  <div class="grab"></div>
+  <h2 id="searchTitle">검색 결과</h2>
+  <div class="search-list" id="searchList"></div>
+  <div class="actions">
+    <button class="btn primary" id="closeSearch">닫기</button>
+  </div>
+</div>
+
+<!-- day sheet -->
+<div class="sheet" id="daySheet">
+  <div class="grab"></div>
+  <h2 id="dayTitle"></h2>
+  <div class="day-list" id="dayList"></div>
+  <div class="actions">
+    <button class="btn primary" id="addOnDay">이 날 일정 추가</button>
+  </div>
+</div>
+
+<!-- edit sheet -->
+<div class="sheet" id="editSheet">
+  <div class="grab"></div>
+  <div class="edit-head">
+    <h2 id="editTitle">새 일정</h2>
+    <button type="button" class="back-btn" id="backToSearch" aria-label="검색 결과로">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>검색</span>
+    </button>
+  </div>
+  <label>제목</label>
+  <div class="input-mic">
+    <input type="text" id="fTitle" placeholder="예: 납품 점검" />
+    <button type="button" class="mic-btn" id="micTitle" data-target="fTitle" aria-label="음성 입력"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+  </div>
+  <div class="row2">
+    <div><label>시작일</label><input type="date" id="fStart" /></div>
+    <div><label>종료일</label><input type="date" id="fEnd" /></div>
+  </div>
+  <label>메모 (선택)</label>
+  <div class="input-mic">
+    <textarea id="fMemo" placeholder="세부 내용"></textarea>
+    <button type="button" class="mic-btn area" id="micMemo" data-target="fMemo" aria-label="음성 입력"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+  </div>
+  <label>종류</label>
+  <div class="types" id="types">
+    <button type="button" class="type-chip sel" data-t="work">업무</button>
+    <button type="button" class="type-chip" data-t="important">중요일정</button>
+    <button type="button" class="type-chip" data-t="holiday">휴일일정</button>
+    <button type="button" class="type-chip" data-t="personal">개인일정</button>
+  </div>
+  <div class="colors-hint" id="weekendHint">주말에는 업무 일정을 설정할 수 없습니다</div>
+  <label>배경색</label>
+  <div class="colors" id="colors">
+    <div class="sw sel" data-c="0"></div>
+    <div class="sw" data-c="1"></div>
+    <div class="sw" data-c="2"></div>
+    <div class="sw" data-c="3"></div>
+    <div class="sw" data-c="4"></div>
+    <div class="sw" data-c="5"></div>
+    <div class="sw" data-c="6"></div>
+    <div class="sw" data-c="7"></div>
+    <div class="sw" data-c="8"></div>
+  </div>
+  <div class="colors-hint" id="colorsHint">하루 일정은 배경색이 적용되지 않습니다</div>
+  <div class="actions">
+    <button class="btn ghost" id="cancelEdit">취소</button>
+    <button class="btn primary" id="saveEdit">저장</button>
+  </div>
+  <div class="actions" id="deleteRow" style="display:none; margin-top:10px;">
+    <button class="btn danger" id="deleteEvent">이 일정 삭제</button>
+  </div>
+</div>
+
+<script>
+const STORE = 'workcal.events.v1';
+const MS = 86400000;
+let events = load();
+let view = new Date(); view.setDate(1);
+let selectedType = 'work';
+let selectedBg = 0;
+let editingId = null;
+let lastSelectedDate = null;
+let lastSearchQuery = '';   // 마지막 검색어 (뒤로가기로 목록 복원용)
+let cameFromSearch = false; // 수정 화면이 검색을 거쳐 열렸는지
+let _navActive = false;     // 검색 목록이 history에 한 단계 쌓여 있는지
+let showPersonal = (localStorage.getItem('workcal.showPersonal') !== 'off'); // 개인일정 달력 표시 여부(기본 표시)
+
+const $ = id => document.getElementById(id);
+
+// simple toast popup (reused for backup + voice messages)
+let _toastEl = null, _toastTimer = null;
+function showToast(text) {
+  if (!_toastEl) {
+    _toastEl = document.createElement('div');
+    _toastEl.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:#333;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:60;max-width:84%;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.25);';
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = text;
+  _toastEl.style.display = 'block';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { if (_toastEl) _toastEl.style.display = 'none'; }, 2500);
+}
+const pad = n => String(n).padStart(2,'0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || []; }
+  catch(e) { return []; }
+}
+function save() {
+  const json = JSON.stringify(events);
+  localStorage.setItem(STORE, json);
+  // auto backup: overwrite a single latest snapshot (on-device)
+  try {
+    localStorage.setItem(STORE + '.backup', JSON.stringify({ at: Date.now(), events }));
+  } catch(e) {}
+  // 클라우드에도 올리기 — 폰 저장은 그대로 두고 추가만
+  if (window.cloudReady && typeof window.cloudSave === 'function') {
+    window.cloudSave(events);
+  }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+const KMONTH = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const KDOW = ['일','월','화','수','목','금','토'];
+
+// 2026 대한민국 공휴일 (정부 월력요항 기준). key: 'M-D'
+const HOLIDAYS = {
+  '1-1': '신정',
+  '2-16': '설날연휴', '2-17': '설날', '2-18': '설날연휴',
+  '3-1': '삼일절', '3-2': '대체공휴일',
+  '5-5': '어린이날',
+  '5-24': '부처님오신날', '5-25': '대체공휴일',
+  '6-3': '지방선거', '6-6': '현충일',
+  '8-15': '광복절', '8-17': '대체공휴일',
+  '9-24': '추석연휴', '9-25': '추석', '9-26': '추석연휴',
+  '10-3': '개천절', '10-5': '대체공휴일', '10-9': '한글날',
+  '12-25': '성탄절'
+};
+function holidayName(d) {
+  return HOLIDAYS[(d.getMonth()+1) + '-' + d.getDate()] || null;
+}
+
+// pastel background palette (10) + event type text colors
+const PALETTE = ['#ff8fa3','#ffb56b','#ffe66d','#8fe388','#5ad2f4','#6c9bff','#b388ff','#ff7ec7','#c0c0c8'];
+const TYPE_COLORS = { work:'#1a1a1a', important:'#2563a8', holiday:'#d63a3a', personal:'#1d9e75' };
+const TYPE_COLORS_DARK = { work:'#f2f2f2', important:'#7fb3ed', holiday:'#ff8080', personal:'#5fd3a8' };
+function isDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
+function evTextColor(e){
+  const t = e.type || 'work';
+  return (isDark()?TYPE_COLORS_DARK:TYPE_COLORS)[t] || (isDark()?'#f2f2f2':'#1a1a1a');
+}
+// fixed background tints for non-work types (same hue family as the text color)
+const TYPE_BG = { important:'#cfe3ff', holiday:'#ffd6d6', personal:'#d4f5cb' };
+const TYPE_BG_DARK = { important:'#23344a', holiday:'#4a2626', personal:'#234a3a' };
+function evBgColor(e){
+  const t = e.type || 'work';
+  if (t !== 'work') return 'transparent';
+  let i = (typeof e.bg === 'number') ? e.bg : 0;
+  return PALETTE[i] || PALETTE[0];
+}
+
+
+function render() {
+  $('ymLabel').textContent = view.getFullYear() + '년 ' + (view.getMonth()+1) + '월';
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+
+  // Measure a weekday cell's width and expose it as --cellw so font sizes can
+  // scale to the cell (works on portrait, landscape, tablet) instead of vw.
+  const gw = grid.clientWidth || (window.innerWidth - 16);
+  const weekdayCellW = (gw - 5) * (5 / 5.8) / 5; // 5 gaps approx, 5 weekday cols of 5.8 units
+  document.documentElement.style.setProperty('--cellw', weekdayCellW + 'px');
+
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const dow1 = first.getDay(); // 0=Sun .. 6=Sat
+
+  // Grid start (compute FIRST): if the 1st is Sat/Sun, begin the body on the
+  // following Monday so the month fits in 5 rows; otherwise start from the
+  // Monday on/before the 1st.
+  let gridStartMonday;
+  if (dow1 === 6) {
+    gridStartMonday = new Date(first); gridStartMonday.setDate(3);
+  } else if (dow1 === 0) {
+    gridStartMonday = new Date(first); gridStartMonday.setDate(2);
+  } else {
+    const offset = (dow1 + 6) % 7; // Mon=0
+    gridStartMonday = new Date(first);
+    gridStartMonday.setDate(first.getDate() - offset);
+  }
+
+  // Corner: the weekend (Sat & Sun) that sits immediately BEFORE the grid's
+  // first Monday. This is the paper-diary corner (e.g. for a month starting
+  // Sunday, corner = the previous day Sat + that Sun).
+  const corner = $('cornerDates');
+  corner.innerHTML = '';
+  const cornerSun = new Date(gridStartMonday); cornerSun.setDate(gridStartMonday.getDate() - 1);
+  const cornerSat = new Date(gridStartMonday); cornerSat.setDate(gridStartMonday.getDate() - 2);
+  const fmtMD = d => (d.getMonth()+1) + '/' + d.getDate();
+
+  [[cornerSat,'sat'],[cornerSun,'sun']].forEach(([d, cls]) => {
+    const row = document.createElement('div');
+    row.className = 'corner-row ' + cls;
+    const dlabel = document.createElement('span');
+    dlabel.className = 'cdate';
+    dlabel.textContent = fmtMD(d);
+    row.appendChild(dlabel);
+    // one single-day event title, if any (empty row still shows underline)
+    const di = iso(d);
+    const dayEvents = events.filter(e => e.start === di && e.end === di
+      && (showPersonal || e.type !== 'personal'));
+    if (dayEvents.length) {
+      const t = document.createElement('span');
+      t.className = 'corner-ev';
+      // 제목은 6글자까지만 보이고 넘으면 …을 붙여 총 7칸으로 고정
+      const rawTitle = dayEvents[0].title || '';
+      const shownTitle = rawTitle.length > 6 ? rawTitle.slice(0, 6) + '…' : rawTitle;
+      t.textContent = shownTitle + (dayEvents.length > 1 ? ' +' + (dayEvents.length-1) : '');
+      t.style.color = evTextColor(dayEvents[0]);
+      row.appendChild(t);
+    }
+    row.addEventListener('click', (ev) => { ev.stopPropagation(); openDay(new Date(d)); });
+    corner.appendChild(row);
+  });
+
+  let start = gridStartMonday;
+
+  // Always render exactly 5 rows.
+  const numWeeks = 5;
+
+  const todayIso = iso(new Date());
+
+  for (let w = 0; w < numWeeks; w++) {
+    const weekStart = new Date(start); weekStart.setDate(start.getDate() + w*7);
+    const week = document.createElement('div');
+    week.className = 'week';
+
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+      weekDates.push(d);
+    }
+
+    // 5 weekday cells
+    for (let i = 0; i < 5; i++) {
+      const d = weekDates[i];
+      week.appendChild(makeCell(d, false, todayIso));
+    }
+    // 1 weekend cell (Sat + Sun)
+    week.appendChild(makeWeekendCell(weekDates[5], weekDates[6], todayIso));
+
+    // event bars for weekdays
+    layoutEvents(week, weekDates, todayIso);
+
+    grid.appendChild(week);
+  }
+}
+
+function makeCell(d, isWeekend, todayIso) {
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  if (d.getMonth() !== view.getMonth()) cell.classList.add('other');
+  if (iso(d) === todayIso) cell.classList.add('today');
+  const num = document.createElement('div');
+  num.className = 'dnum';
+  num.textContent = (d.getMonth() !== view.getMonth())
+    ? (d.getMonth()+1) + '/' + d.getDate()
+    : d.getDate();
+  const hol = holidayName(d);
+  if (hol && d.getMonth() === view.getMonth()) {
+    num.classList.add('holiday'); // red date; the name is drawn as a bar (lane 0) for consistent sizing
+  }
+  cell.appendChild(num);
+  const evWrap = document.createElement('div');
+  evWrap.className = 'events';
+  cell.appendChild(evWrap);
+  cell.addEventListener('click', () => openDay(d));
+  return cell;
+}
+
+function makeWeekendCell(sat, sun, todayIso) {
+  const cell = document.createElement('div');
+  cell.className = 'cell weekend';
+  if (sat.getMonth() !== view.getMonth() && sun.getMonth() !== view.getMonth()) cell.classList.add('other');
+
+  [['top', sat], ['bot', sun]].forEach(([pos, d]) => {
+    const half = document.createElement('div');
+    half.className = 'we-half ' + pos;
+    if (iso(d) === todayIso) half.classList.add('we-today'); // 오늘이 주말이면 표시
+    const wd = document.createElement('div');
+    wd.className = 'wd';
+    wd.textContent = (d.getMonth() !== view.getMonth())
+      ? (d.getMonth()+1) + '/' + d.getDate()
+      : d.getDate();
+    half.appendChild(wd);
+
+    // weekend holiday name (e.g. 부처님오신날 on a Sunday)
+    const hol = holidayName(d);
+    if (hol && d.getMonth() === view.getMonth()) {
+      wd.classList.add('wd-holiday');
+      const hn = document.createElement('div');
+      hn.className = 'holiday-name';
+      hn.textContent = hol;
+      half.appendChild(hn);
+    }
+
+    // Only single-day events that actually belong to this weekend day.
+    // Multi-day events started on weekdays skip the weekend.
+    // (개인일정 숨김이면 달력에서 제외)
+    const di = iso(d);
+    const dayEvents = events.filter(e => e.start === di && e.end === di
+      && (showPersonal || e.type !== 'personal'));
+    if (dayEvents.length) {
+      const wevs = document.createElement('div');
+      wevs.className = 'wevs';
+      dayEvents.slice(0,3).forEach(e => {
+        const row = document.createElement('div');
+        row.className = 'we-ev';
+        row.textContent = e.title;
+        row.style.color = evTextColor(e);
+        wevs.appendChild(row);
+      });
+      if (dayEvents.length > 3) {
+        const more = document.createElement('div');
+        more.className = 'we-more';
+        more.textContent = '+' + (dayEvents.length - 3);
+        wevs.appendChild(more);
+      }
+      half.appendChild(wevs);
+    }
+    half.addEventListener('click', (ev) => { ev.stopPropagation(); openDay(d); });
+    cell.appendChild(half);
+  });
+  return cell;
+}
+
+function eventsOnDay(d) {
+  const di = iso(d);
+  return events.filter(e => di >= e.start && di <= e.end)
+    .sort((a,b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+}
+
+function layoutEvents(week, weekDates, todayIso) {
+  // Weekday columns 0..4 = weekDates 0..4. Weekend column (index 5) is excluded from bars.
+  // Collect events overlapping this week's Mon..Fri range.
+  const monIso = iso(weekDates[0]);
+  const friIso = iso(weekDates[4]);
+
+  // gather unique events touching Mon..Fri (개인일정 숨김이면 제외)
+  const seen = {};
+  const weekEvents = [];
+  for (let i = 0; i < 5; i++) {
+    eventsOnDay(weekDates[i]).forEach(e => {
+      if (!showPersonal && e.type === 'personal') return; // 달력에서 개인일정 숨김
+      if (!seen[e.id]) { seen[e.id] = true; weekEvents.push(e); }
+    });
+  }
+  // sort: 종류 우선순위(휴일>중요>업무>개인) → 시작일 빠른 순 → 긴 순
+  // 위 lane(0번)부터 채워지므로, 우선순위 높은 종류가 위로 올라간다.
+  const TYPE_RANK = { holiday: 0, important: 1, work: 2, personal: 3 };
+  weekEvents.sort((a,b) => {
+    const ra = TYPE_RANK[a.type || 'work'] ?? 2;
+    const rb = TYPE_RANK[b.type || 'work'] ?? 2;
+    if (ra !== rb) return ra - rb;
+    if (a.start !== b.start) return a.start < b.start ? -1 : 1;
+    const la = (parse(a.end)-parse(a.start)), lb = (parse(b.end)-parse(b.start));
+    return lb - la;
+  });
+
+  // How many event rows fit in a weekday cell without touching the date number.
+  const gridEl = $('grid');
+  let cellH = gridEl && gridEl.clientHeight ? gridEl.clientHeight / 5 : 0;
+  if (!cellH) cellH = (window.innerHeight - 110) / 5; // fallback before first measure
+  const LANE_H = 18, DATE_RESERVE = 22, BOTTOM_RESERVE = 13;
+  let MAX_LANES = Math.floor((cellH - DATE_RESERVE - BOTTOM_RESERVE) / LANE_H);
+  if (MAX_LANES < 1) MAX_LANES = 1;
+
+  // Holiday names live in lane 0 of the cells they fall on. Pre-occupy lane 0
+  // for those columns so events never share a row with a holiday name. Every
+  // event (single or multi-day) then uses the SAME lane system, and its
+  // vertical position is purely lane * LANE_H — no separate offset.
+  const layer = document.createElement('div');
+  layer.className = 'barlayer';
+
+  // Holidays occupy lane 0 and are drawn as plain bars (no arrow/bg) so they
+  // use the exact same font, padding and clipping rules as normal events.
+  const lanes = []; // lanes[L] = array of [startCol,endCol] occupied
+  lanes[0] = [];
+  const LANE_H_HOL = 18;
+  for (let i = 0; i < 5; i++) {
+    const hol = holidayName(weekDates[i]);
+    if (!hol) continue;
+    lanes[0].push([i, i]);
+    const hb = document.createElement('div');
+    hb.className = 'bar holiday-bar';
+    hb.style.background = 'transparent';
+    const totalU = 5 + 0.8, cW = 100 / totalU;
+    hb.style.left = 'calc(' + (i * cW) + '% + 2px)';
+    hb.style.width = 'calc(' + cW + '% - 4px)';
+    hb.style.top = '0px';
+    hb.innerHTML = '<span class="lbl"></span>';
+    hb.querySelector('.lbl').textContent = hol;
+    layer.appendChild(hb);
+  }
+
+  const overflowByCol = [0,0,0,0,0];
+
+  weekEvents.forEach(e => {
+    let startCol = -1, endCol = -1;
+    for (let i = 0; i < 5; i++) {
+      const di = iso(weekDates[i]);
+      if (di >= e.start && di <= e.end) {
+        if (startCol === -1) startCol = i;
+        endCol = i;
+      }
+    }
+    if (startCol === -1) return;
+
+    const isMultiDay = e.start !== e.end;
+    const arrowL = isMultiDay;
+    const arrowR = isMultiDay;
+    const contL = e.start < iso(weekDates[0]);
+    const contR = e.end   > iso(weekDates[4]);
+
+    // find the first lane with no column clash (lane 0 may be blocked by holidays)
+    let lane = -1;
+    for (let L = 0; L < MAX_LANES; L++) {
+      const occ = lanes[L] || [];
+      const clash = occ.some(([s,en]) => !(endCol < s || startCol > en));
+      if (!clash) { lane = L; lanes[L] = occ.concat([[startCol,endCol]]); break; }
+    }
+    if (lane === -1) {
+      for (let c = startCol; c <= endCol; c++) overflowByCol[c]++;
+      return;
+    }
+
+    const bar = document.createElement('div');
+    bar.className = 'bar' + (contL?' cont-l':'') + (contR?' cont-r':'');
+    bar.style.background = evBgColor(e);
+    bar.style.color = evTextColor(e);
+    const totalUnits = 5 + 0.8;
+    const colW = 100 / totalUnits;
+    const leftPct = startCol * colW;
+    const widthPct = (endCol - startCol + 1) * colW;
+    bar.style.left = 'calc(' + leftPct + '% + 2px)';
+    bar.style.width = 'calc(' + widthPct + '% - 4px)';
+    bar.style.top = (lane * LANE_H) + 'px';
+
+    let inner = '';
+    if (arrowL) inner += '<span class="head l"></span><span class="line"></span>';
+    inner += '<span class="lbl"></span>';
+    if (arrowR) inner += '<span class="line"></span><span class="head r"></span>';
+    bar.innerHTML = inner;
+    bar.querySelector('.lbl').textContent = e.title;
+    bar.addEventListener('click', (ev) => { ev.stopPropagation(); openEdit(e); });
+    layer.appendChild(bar);
+  });
+
+  week.appendChild(layer);
+
+  // "+N" overflow markers per column
+  for (let i = 0; i < 5; i++) {
+    if (overflowByCol[i] > 0) {
+      const cell = week.querySelectorAll('.cell')[i];
+      const more = document.createElement('div');
+      more.className = 'more';
+      more.style.position = 'absolute';
+      more.style.bottom = '2px';
+      more.textContent = '+' + overflowByCol[i];
+      cell.appendChild(more);
+    }
+  }
+}
+
+/* ---- day sheet ---- */
+function openDay(d) {
+  lastSelectedDate = new Date(d);
+  $('dayTitle').textContent = (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + KDOW[d.getDay()] + ')';
+  const dow = d.getDay();
+  const isWeekend = (dow === 0 || dow === 6);
+  const di = iso(d);
+  // Weekend: only single-day events that belong to this day.
+  // Weekday: all events overlapping this day (incl. multi-day bars).
+  const list = isWeekend
+    ? events.filter(e => e.start === di && e.end === di)
+        .sort((a,b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))
+    : eventsOnDay(d);
+  const wrap = $('dayList');
+  wrap.innerHTML = '';
+  if (list.length === 0) {
+    wrap.innerHTML = '<div class="empty">일정이 없습니다</div>';
+  } else {
+    list.forEach(e => {
+      const row = document.createElement('div');
+      row.className = 'day-ev';
+      const range = (e.start !== e.end) ? fmtRange(e) : '';
+      row.innerHTML = '<div class="dot"></div><div class="info"><div class="t"></div>'+
+        (range?'<div class="sub range"></div>':'')+
+        (e.memo?'<div class="sub memo"></div>':'')+'</div>';
+      row.querySelector('.dot').style.background = evTextColor(e);
+      row.querySelector('.t').textContent = e.title;
+      if (range) row.querySelector('.range').textContent = range;
+      if (e.memo) row.querySelector('.memo').textContent = e.memo;
+      row.addEventListener('click', () => openEdit(e));
+      wrap.appendChild(row);
+    });
+  }
+  showSheet('daySheet');
+}
+function fmtRange(e) {
+  const s = parse(e.start), en = parse(e.end);
+  return (s.getMonth()+1)+'/'+s.getDate()+' – '+(en.getMonth()+1)+'/'+en.getDate();
+}
+
+// 주어진 날짜(시작일)가 속한 '달'에 표시되는 업무 일정들이 쓰는 배경색을 모아,
+// 아직 안 쓰인 첫 색(c0..c8)을 돌려준다. 9색이 모두 쓰였으면 c0부터 순환한다.
+// 걸친 일정(예: 6월말~7월초)은 두 달 모두에서 쓰인 것으로 계산된다.
+function pickUnusedBg(startIsoStr) {
+  const d = startIsoStr ? parse(startIsoStr) : new Date();
+  const y = d.getFullYear(), m = d.getMonth();
+  // 그 달의 시작/끝 경계
+  const monthStart = iso(new Date(y, m, 1));
+  const monthEnd = iso(new Date(y, m + 1, 0));
+  // 그 달과 날짜 범위가 겹치는 업무 일정의 색 수집 (걸친 일정 = 양쪽 달 모두 포함)
+  const used = new Set();
+  events.forEach(ev => {
+    if ((ev.type || 'work') !== 'work') return;          // 업무만 색을 씀
+    if (ev.end < monthStart || ev.start > monthEnd) return; // 그 달과 안 겹치면 제외
+    const bg = (typeof ev.bg === 'number') ? ev.bg : 0;
+    used.add(bg);
+  });
+  // 편집 중인 일정 자신은 제외 (수정 케이스에선 호출 안 하지만 안전장치)
+  for (let i = 0; i < PALETTE.length; i++) {
+    if (!used.has(i)) return i;            // 안 쓰인 첫 색
+  }
+  // 9색이 다 쓰였으면 그 달의 업무 일정 개수 기준으로 순환
+  const count = used.size; // 사실상 9
+  return count % PALETTE.length; // = 0 (c0부터 다시)
+}
+
+/* ---- edit sheet ---- */
+function openEdit(e, fromSearch) {
+  closeSheet('daySheet');
+  cameFromSearch = !!fromSearch;
+  // 검색을 거쳐 들어온 경우에만 헤더에 '검색' 뒤로 버튼을 보여준다
+  document.querySelector('.edit-head').classList.toggle('from-search', cameFromSearch);
+  if (e) {
+    editingId = e.id;
+    $('editTitle').textContent = '일정 수정';
+    $('fTitle').value = e.title;
+    $('fStart').value = e.start;
+    $('fEnd').value = e.end;
+    $('fMemo').value = e.memo || '';
+    selectedType = e.type || 'work';
+    selectedBg = (typeof e.bg === 'number') ? e.bg : 0;
+    $('deleteRow').style.display = 'flex';
+  } else {
+    editingId = null;
+    $('editTitle').textContent = '새 일정';
+    const base = lastSelectedDate ? iso(lastSelectedDate) : iso(new Date());
+    $('fTitle').value = '';
+    $('fStart').value = base;
+    $('fEnd').value = base;
+    $('fMemo').value = '';
+    selectedType = 'work';
+    selectedBg = pickUnusedBg(base); // 그 달에 안 쓰인 색을 기본값으로
+    $('deleteRow').style.display = 'none';
+  }
+  document.querySelectorAll('#types .type-chip').forEach(c => {
+    c.classList.toggle('sel', c.dataset.t === selectedType);
+  });
+  document.querySelectorAll('#colors .sw').forEach(sw => {
+    sw.classList.toggle('sel', +sw.dataset.c === selectedBg);
+  });
+  syncWeekendRule();
+  setTimeout(() => showSheet('editSheet'), 180);
+}
+
+// Disable background-color picker only for non-work types
+// (업무는 하루/여러날 모두 배경색 적용 가능)
+function syncColorsEnabled() {
+  const nonWork = (selectedType && selectedType !== 'work');
+  $('colors').classList.toggle('disabled', nonWork);
+  $('colorsHint').classList.toggle('show', nonWork);
+  $('colorsHint').textContent = '이 종류는 배경색이 자동으로 정해집니다';
+}
+
+// 시작일이 주말(토/일)이면 '업무' 종류를 막고, 업무였다면 '중요일정'으로 자동 전환
+function isWeekendDate(isoStr) {
+  if (!isoStr) return false;
+  const dow = parse(isoStr).getDay();
+  return dow === 0 || dow === 6;
+}
+function syncWeekendRule() {
+  const weekend = isWeekendDate($('fStart').value);
+  const workChip = document.querySelector('#types .type-chip[data-t=work]');
+  if (weekend) {
+    // 업무가 선택돼 있었으면 중요일정으로 자동 변경
+    if (selectedType === 'work') {
+      selectedType = 'important';
+      document.querySelectorAll('#types .type-chip').forEach(c =>
+        c.classList.toggle('sel', c.dataset.t === selectedType));
+    }
+    if (workChip) workChip.classList.add('chip-disabled');
+    $('weekendHint').classList.add('show');
+  } else {
+    if (workChip) workChip.classList.remove('chip-disabled');
+    $('weekendHint').classList.remove('show');
+  }
+  syncColorsEnabled();
+}
+
+function saveEvent() {
+  const title = $('fTitle').value.trim();
+  if (!title) { $('fTitle').focus(); return; }
+  let start = $('fStart').value, end = $('fEnd').value;
+  if (!start) start = iso(new Date());
+  if (!end || end < start) end = start;
+  const data = {
+    title, start, end,
+    memo: $('fMemo').value.trim(),
+    type: selectedType,
+    bg: selectedBg
+  };
+  let isEdit = false;
+  if (editingId) {
+    const idx = events.findIndex(x => x.id === editingId);
+    if (idx >= 0) events[idx] = { ...events[idx], ...data };
+    isEdit = true;
+  } else {
+    events.push({ id: uid(), ...data });
+  }
+  save();
+  closeSheet('editSheet');
+  render();
+  showToast(isEdit ? '일정 변경 완료되었습니다' : '일정 추가 완료되었습니다');
+}
+
+function deleteEvent() {
+  if (!editingId) return;
+  events = events.filter(x => x.id !== editingId);
+  save();
+  closeSheet('editSheet');
+  render();
+  showToast('일정 삭제 완료되었습니다');
+}
+
+/* ---- sheet helpers ---- */
+// html+body 동시에 잠금/해제 (키보드가 올라와도 뒤 달력이 안 밀리게)
+function lockBack() {
+  document.documentElement.classList.add('sheet-open');
+  document.body.classList.add('sheet-open');
+}
+function unlockBack() {
+  document.documentElement.classList.remove('sheet-open');
+  document.body.classList.remove('sheet-open');
+}
+function showSheet(id) {
+  $('scrim').classList.add('open'); $(id).classList.add('open');
+  lockBack();
+}
+function closeSheet(id) {
+  $(id).classList.remove('open');
+  const anyOpen = document.querySelectorAll('.sheet.open').length;
+  if (!anyOpen) { $('scrim').classList.remove('open'); unlockBack(); }
+}
+function closeAll() {
+  document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
+  $('scrim').classList.remove('open');
+  unlockBack();
+  cameFromSearch = false;
+  if (_navActive) { _navActive = false; history.back(); }
+}
+
+/* ---- year/month picker ---- */
+function openPicker() {
+  const yearCol = $('yearCol');
+  const monthCol = $('monthCol');
+  yearCol.innerHTML = '';
+  monthCol.innerHTML = '';
+  const curY = view.getFullYear();
+  const curM = view.getMonth();
+  for (let y = curY - 5; y <= curY + 5; y++) {
+    const o = document.createElement('div');
+    o.className = 'opt' + (y === curY ? ' sel' : '');
+    o.textContent = y + '년';
+    o.onclick = () => {
+      view.setFullYear(y); render();
+      [...yearCol.children].forEach(c => c.classList.toggle('sel', c === o));
+    };
+    yearCol.appendChild(o);
+  }
+  for (let m = 0; m < 12; m++) {
+    const o = document.createElement('div');
+    o.className = 'opt' + (m === curM ? ' sel' : '');
+    o.textContent = (m+1) + '월';
+    o.onclick = () => {
+      view.setDate(1); view.setMonth(m); render();
+      [...monthCol.children].forEach(c => c.classList.toggle('sel', c === o));
+    };
+    monthCol.appendChild(o);
+  }
+  $('pickerScrim').classList.add('open');
+  $('picker').classList.add('open');
+  lockBack();
+  // center current selections
+  setTimeout(() => {
+    const sy = yearCol.querySelector('.sel'); if (sy) sy.scrollIntoView({block:'center'});
+    const sm = monthCol.querySelector('.sel'); if (sm) sm.scrollIntoView({block:'center'});
+  }, 30);
+}
+function closePicker() {
+  $('picker').classList.remove('open');
+  $('pickerScrim').classList.remove('open');
+  unlockBack();
+}
+
+/* ---- events ---- */
+// 검색을 거쳐 들어온 수정 화면에서 '뒤로' 버튼 → 폰 뒤로가기와 동일하게 처리
+function backToSearchList() {
+  if (_navActive) {
+    history.back(); // popstate 핸들러가 검색 목록 복원을 담당
+  } else {
+    cameFromSearch = false;
+    closeSheet('editSheet');
+    if (lastSearchQuery) setTimeout(() => showSearchResults(lastSearchQuery), 60);
+  }
+}
+$('titleBtn').onclick = openPicker;
+$('pickerScrim').onclick = closePicker;
+$('backToSearch').onclick = backToSearchList;
+$('addBtn').onclick = () => { lastSelectedDate = lastSelectedDate || new Date(); openEdit(null); };
+$('addOnDay').onclick = () => openEdit(null);
+// 개인일정 표시/숨김 토글
+function syncPersonalToggle() {
+  $('personalToggle').classList.toggle('off', !showPersonal);
+}
+$('personalToggle').onclick = () => {
+  showPersonal = !showPersonal;
+  localStorage.setItem('workcal.showPersonal', showPersonal ? 'on' : 'off');
+  syncPersonalToggle();
+  render();
+  showToast(showPersonal ? '개인일정을 표시합니다' : '개인일정을 숨깁니다 (날짜를 누르면 보입니다)');
+};
+syncPersonalToggle();
+$('cancelEdit').onclick = () => closeSheet('editSheet');
+$('saveEdit').onclick = saveEvent;
+$('fStart').onchange = syncWeekendRule;
+$('fEnd').onchange = syncColorsEnabled;
+$('deleteEvent').onclick = deleteEvent;
+$('scrim').onclick = closeAll;
+document.querySelectorAll('#colors .sw').forEach(sw => {
+  sw.onclick = () => {
+    selectedBg = +sw.dataset.c;
+    document.querySelectorAll('#colors .sw').forEach(s => s.classList.toggle('sel', s===sw));
+  };
+});
+document.querySelectorAll('#types .type-chip').forEach(chip => {
+  chip.onclick = () => {
+    selectedType = chip.dataset.t;
+    document.querySelectorAll('#types .type-chip').forEach(c => c.classList.toggle('sel', c===chip));
+    syncColorsEnabled();
+  };
+});
+
+// Keep the edit sheet above the on-screen keyboard.
+(function () {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  let lastKb = -1;
+  let scrolledFor = null; // 이번 포커스에서 이미 끌어올렸는지 (중복 스크롤 방지)
+  const setKb = () => {
+    const kb = Math.round(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    // 1~2px 미세 변동은 무시해서 시트가 출렁이지 않게 한다
+    if (Math.abs(kb - lastKb) < 4) return false;
+    lastKb = kb;
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    return true;
+  };
+  // resize(키보드 등장/사라짐)에서만 필요 시 한 번 끌어올린다
+  vv.addEventListener('resize', () => {
+    const changed = setKb();
+    const kb = lastKb;
+    const el = document.activeElement;
+    if (kb > 0 && el && el.getBoundingClientRect && el.scrollIntoView) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom > vv.height - 8 && scrolledFor !== el) {
+        scrolledFor = el;
+        el.scrollIntoView({ block: 'center' }); // smooth 제거: 즉시 이동(반복 떨림 방지)
+      }
+    }
+    if (kb === 0) scrolledFor = null; // 키보드 내려가면 초기화
+  });
+  // scroll 이벤트에서는 값 갱신도 스크롤도 하지 않는다 (떨림의 주원인이라 무시)
+})();
+
+// 어떤 입력칸이든 포커스가 들어오면 뒤 달력을 잠그고, 빠지면 (열린 시트가
+// 없을 때) 풀어준다. 이렇게 전역으로 한 번만 걸어두면 앞으로 어떤 입력칸을
+// 새로 추가해도 자동으로 뒤가 잠긴다 — 매번 따로 처리할 필요가 없다.
+(function () {
+  const isField = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  document.addEventListener('focusin', (e) => {
+    if (isField(e.target)) lockBack();
+  });
+  document.addEventListener('focusout', () => {
+    // 포커스가 다른 입력칸으로 옮겨가는 중일 수 있으니 한 박자 뒤에 확인
+    setTimeout(() => {
+      const stillField = isField(document.activeElement);
+      const anySheet = document.querySelectorAll('.sheet.open, .picker.open').length;
+      if (!stillField && !anySheet) unlockBack();
+    }, 60);
+  });
+})();
+
+// [터치 스크롤 가드] 시트 안에서 손가락으로 스크롤할 때, 시트가 이미 맨 위/맨
+// 아래에 닿았는데도 더 끌면 그 움직임이 뒤 달력으로 새어나가(스크롤 체이닝)
+// 화면이 떨린다. 끝에 닿은 상태에서의 '바깥 방향' 드래그만 막아 뒤로 전달되지
+// 않게 한다. (특히 안드로이드 크롬에서 CSS overscroll-behavior만으론 부족함)
+// 또한 메모(textarea)처럼 '시트 안에서 자체 스크롤되는 영역'을 만지면 그쪽
+// 스크롤을 우선하고, 그 영역이 끝에 닿았을 때만 동작을 막는다.
+(function () {
+  let startY = 0;
+  let target = null;     // 시트/피커
+  let inner = null;      // 시트 안에서 자체 스크롤되는 영역(textarea 등)
+  // 세로로 스크롤 가능한 요소인지
+  function scrollableEl(el) {
+    while (el && el !== document.body) {
+      if (el.tagName === 'TEXTAREA' && el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+  document.addEventListener('touchstart', (e) => {
+    target = e.target.closest('.sheet, .picker');
+    inner = scrollableEl(e.target);
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!target) {
+      // 시트 바깥(달력 등)을 만지는 경우: 시트가 열려 있으면 뒤 스크롤 자체를 막음
+      if (document.querySelector('.sheet.open, .picker.open')) e.preventDefault();
+      return;
+    }
+    const y = e.touches[0].clientY;
+    const dy = y - startY; // 아래로 끌면 +, 위로 끌면 -
+
+    // 1) 메모(textarea) 등 내부 스크롤 영역을 만지는 중이면 그쪽 스크롤을 우선한다.
+    //    그 영역이 끝에 닿은 채로 더(바깥 방향) 끌 때만 막아서, 시트/뒤로 안 샌다.
+    if (inner) {
+      const iTop = inner.scrollTop <= 0;
+      const iBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1;
+      if ((iTop && dy > 0) || (iBottom && dy < 0)) {
+        e.preventDefault(); // 내부 영역 끝 → 시트로 전달 차단
+      }
+      return; // 내부 영역 안에서는 브라우저 기본 스크롤에 맡긴다
+    }
+
+    // 2) 그 외(시트 본문) — 시트가 끝에 닿은 채 바깥 방향으로 끌면 막는다
+    const atTop = target.scrollTop <= 0;
+    const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1;
+    const scrollable = target.scrollHeight > target.clientHeight;
+    if (!scrollable || (atTop && dy > 0) || (atBottom && dy < 0)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+
+// Voice input via Web Speech API (mic buttons on 제목/메모)
+(function () {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micButtons = document.querySelectorAll('.mic-btn');
+  if (!SR) { micButtons.forEach(b => b.style.display = 'none'); return; }
+
+  let rec = null, activeBtn = null, baseText = '';
+
+  function stop() { if (rec) { try { rec.stop(); } catch(e){} } }
+  function startFor(btn) {
+    const field = document.getElementById(btn.dataset.target);
+    if (!field) return;
+    rec = new SR();
+    rec.lang = 'ko-KR';
+    rec.interimResults = true;
+    rec.continuous = false;
+    activeBtn = btn;
+    baseText = field.value ? field.value.trim() + ' ' : '';
+    rec.onresult = (ev) => {
+      let txt = '';
+      for (let i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+      field.value = baseText + txt;
+    };
+    rec.onerror = (ev) => { showToast(micErrorText(ev && ev.error)); endUI(); };
+    rec.onend = () => endUI();
+    btn.classList.add('listening');
+    try { rec.start(); } catch(e) { endUI(); }
+  }
+  function endUI() {
+    if (activeBtn) activeBtn.classList.remove('listening');
+    activeBtn = null; rec = null;
+  }
+  function micErrorText(code) {
+    if (code === 'not-allowed' || code === 'service-not-allowed')
+      return '마이크 권한이 없습니다. 파일을 직접 연 경우(file://) 음성입력이 막힙니다.';
+    if (code === 'no-speech') return '음성이 감지되지 않았습니다.';
+    if (code === 'network') return '네트워크 연결이 필요합니다.';
+    if (code === 'audio-capture') return '마이크를 찾을 수 없습니다.';
+    return '음성 입력을 사용할 수 없는 환경입니다.';
+  }
+  micButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (activeBtn === btn) { stop(); return; }
+      if (rec) stop();
+      startFor(btn);
+    });
+  });
+})();
+
+// settings / backup
+function openSettings() {
+  $('evCount').textContent = '일정 ' + events.length + '개';
+  try {
+    const bk = JSON.parse(localStorage.getItem(STORE + '.backup') || 'null');
+    $('backupInfo').textContent = bk && bk.at
+      ? '마지막 자동 백업: ' + new Date(bk.at).toLocaleString('ko-KR') + ' (이 기기 안에 보관됩니다)'
+      : '일정을 저장하면 이 기기 안에 자동 백업이 만들어집니다.';
+  } catch(e) { $('backupInfo').textContent = ''; }
+  showSheet('settingsSheet');
+}
+function exportBackup() {
+  const data = JSON.stringify({ app: 'workcal', version: 1, exportedAt: Date.now(), events }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  a.href = url;
+  a.download = '캘린더백업_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('캘린더 내보내기 완료되었습니다');
+}
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const list = Array.isArray(parsed) ? parsed : parsed.events;
+      if (!Array.isArray(list)) throw new Error('형식 오류');
+      if (!confirm('가져오면 현재 일정이 이 백업으로 바뀝니다. 진행할까요?')) return;
+      events = list;
+      save();
+      render();
+      $('evCount').textContent = '일정 ' + events.length + '개';
+      $('backupInfo').textContent = '가져오기 완료: ' + events.length + '개 일정을 복원했습니다.';
+      showToast('캘린더 가져오기 완료되었습니다');
+    } catch(e) {
+      $('backupInfo').textContent = '가져오기 실패: 올바른 백업 파일이 아닙니다.';
+      showToast('가져오기 실패: 올바른 파일이 아닙니다');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---- search ---- */
+// escape text for safe HTML, then wrap matched parts with a highlight span
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+function highlight(text, q) {
+  const safe = escapeHtml(text);
+  if (!q) return safe;
+  const lc = text.toLowerCase(), lq = q.toLowerCase();
+  let out = '', from = 0, idx;
+  while ((idx = lc.indexOf(lq, from)) !== -1) {
+    out += escapeHtml(text.slice(from, idx));
+    out += '<span class="sr-hl">' + escapeHtml(text.slice(idx, idx + q.length)) + '</span>';
+    from = idx + q.length;
+  }
+  out += escapeHtml(text.slice(from));
+  return out;
+}
+function runSearch() {
+  const q = $('searchInput').value.trim();
+  if (!q) { $('searchInput').focus(); return; }
+  // 키보드를 먼저 내린다
+  $('searchInput').blur();
+  // 키보드가 내려가는 동안(뷰포트가 다시 커지는 동안) 잠깐 기다렸다가 결과 시트를 올린다
+  setTimeout(() => showSearchResults(q), 220);
+}
+function showSearchResults(q) {
+  lastSearchQuery = q; // 뒤로가기로 이 목록을 다시 열 수 있게 기억
+  const lq = q.toLowerCase();
+  const hits = events
+    .filter(e =>
+      (e.title || '').toLowerCase().includes(lq) ||
+      (e.memo  || '').toLowerCase().includes(lq))
+    .sort((a, b) => (a.start < b.start ? 1 : a.start > b.start ? -1 : 0)); // 최신 시작일 먼저
+
+  $('searchTitle').textContent = '검색 결과 · ' + hits.length + '개';
+  const wrap = $('searchList');
+  wrap.innerHTML = '';
+  if (hits.length === 0) {
+    wrap.innerHTML = '<div class="empty">"' + escapeHtml(q) + '"에 해당하는 일정이 없습니다</div>';
+  } else {
+    hits.forEach(e => {
+      const item = document.createElement('div');
+      item.className = 'sr-item';
+      const dateStr = (e.start === e.end) ? e.start : (e.start + ' ~ ' + e.end);
+      let html = '';
+      html += '<div class="sr-line"><span class="k">날짜: </span><span class="sr-date">' + escapeHtml(dateStr) + '</span></div>';
+      html += '<div class="sr-title">' + highlight(e.title || '', q) + '</div>';
+      if (e.memo) {
+        html += '<div class="sr-line"><span class="k">내용:</span></div>';
+        html += '<div class="sr-memo">' + highlight(e.memo, q) + '</div>';
+      }
+      item.innerHTML = html;
+      item.addEventListener('click', () => { closeSheet('searchSheet'); openEdit(e, true); });
+      wrap.appendChild(item);
+    });
+  }
+  showSheet('searchSheet');
+  // 폰 뒤로가기로 이 목록을 닫을 수 있도록 history에 표시
+  pushNav();
+}
+$('settingsBtn').onclick = openSettings;
+$('exportBtn').onclick = exportBackup;
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
+$('searchBtn').onclick = runSearch;
+$('closeSearch').onclick = () => {
+  closeSheet('searchSheet');
+  if (_navActive) { _navActive = false; history.back(); }
+};
+$('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+
+render();
+// after first paint, cell height is known — re-render once so lane count is accurate
+requestAnimationFrame(() => requestAnimationFrame(render));
+
+/* ---- 클라우드에서 받아와 실시간 반영 ----
+   클라우드 데이터가 도착하면 events를 교체하고, 폰에도 저장한 뒤 다시 그린다.
+   여기서는 localStorage만 갱신하고 다시 클라우드로 되쏘지 않는다 (메아리 방지). */
+window.onCloudData = function(incoming) {
+  events = incoming;
+  try {
+    localStorage.setItem(STORE, JSON.stringify(events));
+    localStorage.setItem(STORE + '.backup', JSON.stringify({ at: Date.now(), events }));
+  } catch(e) {}
+  render();
+};
+function startCloud() {
+  if (window.cloudReady && typeof window.cloudListen === 'function') {
+    window.cloudListen();
+  } else {
+    // Firebase 모듈이 아직 준비 안 됐으면 준비되는 즉시 연결
+    document.addEventListener('cloud-ready', () => {
+      if (typeof window.cloudListen === 'function') window.cloudListen();
+    }, { once: true });
+  }
+}
+startCloud();
+
+/* ---- 폰 뒤로가기(하드웨어/제스처) 지원 ----
+   검색 목록을 history에 한 단계 쌓는다. 검색 목록에서 항목을 눌러 수정
+   화면으로 가면 그 표시는 그대로 유지되므로, 폰 뒤로가기 한 번이
+   상황에 따라 (수정→목록 복귀) 또는 (목록→닫힘)으로 동작한다. */
+function pushNav() {
+  if (_navActive) return;   // 이미 쌓여 있으면 중복으로 더 쌓지 않음
+  _navActive = true;
+  history.pushState({ cal: 1 }, '');
+}
+window.addEventListener('popstate', () => {
+  if (!_navActive) return;
+  _navActive = false;
+  // 검색을 거쳐 들어온 수정 화면이 열려 있으면 → 검색 목록으로 복귀
+  if ($('editSheet').classList.contains('open') && cameFromSearch) {
+    cameFromSearch = false;
+    closeSheet('editSheet');
+    if (lastSearchQuery) setTimeout(() => showSearchResults(lastSearchQuery), 60);
+    return;
+  }
+  // 검색 목록이 열려 있으면 → 닫기
+  if ($('searchSheet').classList.contains('open')) {
+    closeSheet('searchSheet');
+  }
+});
+// re-render on rotation / window resize so font size & lane count match new cell width
+let _rzTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_rzTimer);
+  _rzTimer = setTimeout(render, 150);
+});
+window.addEventListener('orientationchange', () => setTimeout(render, 200));
+</script>
+</body>
+</html>
