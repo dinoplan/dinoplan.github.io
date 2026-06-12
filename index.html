@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.10  ·  파일명: Index_Rev310
+  Release Version 3.12  ·  파일명: Index_Rev312
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -122,6 +122,13 @@
   - Rev310 : 평일 미리보기 칸의 공휴일 '이름'(예: 신정)도 직전/다음 달이면
              흐릿하게 통일(기존엔 날짜 숫자만 흐리고 이름은 진했음). 공휴일
              막대에 다른 달이면 .other(opacity 0.5) 적용.
+  - Rev311 : 주말칸의 직전/다음 달 공휴일 이름(예: 10/3 개천절이 토요일이라
+             주말칸으로 그려지던 경우)도 흐릿하게 통일. Rev310은 평일 막대만
+             처리했어서 주말 공휴일 이름이 진하게 남던 것을 보완. 이제 공휴일
+             이름 흐림이 평일 막대·주말칸·우상단 코너 세 곳 모두 일관됨.
+  - Rev312 : 직전/다음 달 '일반 일정' 막대도 흐릿하게(기존엔 날짜만 흐리고
+             일정 내용은 진했음). 막대가 걸친 첫 칸이 다른 달이면 .other-ev
+             (opacity 0.5). 이로써 다른 달 표시(날짜·공휴일·일반일정)가 모두 통일.
   ============================================
 -->
 <html lang="ko">
@@ -391,6 +398,10 @@
   .bar.holiday-bar .lbl { color: var(--sun); }
   /* 직전/다음 달 공휴일 이름은 흐릿하게 (날짜 숫자와 통일) */
   .bar.holiday-bar.other { opacity: 0.5; }
+  /* 주말칸의 직전/다음 달 공휴일 이름도 흐릿하게 */
+  .holiday-name.other-hol { opacity: 0.5; }
+  /* 직전/다음 달 일반 일정 막대도 흐릿하게 (날짜와 통일) */
+  .bar.other-ev { opacity: 0.5; }
   /* line that fills the space between the label and the arrowhead */
   .bar .line { flex: 1 1 2px; height: 0; border-top: 1.5px solid currentColor; min-width: 0; }
   /* arrowhead drawn as a CSS triangle, sitting flush on the line */
@@ -1143,6 +1154,8 @@ function makeWeekendCell(sat, sun, todayIso) {
       wd.classList.add('wd-holiday');
       const hn = document.createElement('div');
       hn.className = 'holiday-name';
+      // 직전/다음 달 주말 공휴일 이름은 흐릿하게 (날짜와 통일)
+      if (d.getMonth() !== view.getMonth()) hn.classList.add('other-hol');
       hn.textContent = hol;
       half.appendChild(hn);
     }
@@ -1281,6 +1294,8 @@ function layoutEvents(week, weekDates, todayIso) {
 
     const bar = document.createElement('div');
     bar.className = 'bar' + (contL?' cont-l':'') + (contR?' cont-r':'');
+    // 막대가 걸친 첫 칸이 직전/다음 달이면 흐릿하게 (날짜 숫자와 통일)
+    if (weekDates[startCol].getMonth() !== view.getMonth()) bar.classList.add('other-ev');
     bar.style.background = evBgColor(e);
     bar.style.color = evTextColor(e);
     const totalUnits = 5 + 0.8;
