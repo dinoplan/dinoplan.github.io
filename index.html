@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.00  ·  파일명: Index_Rev300
+  Release Version 3.01  ·  파일명: Index_Rev301
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -85,6 +85,8 @@
              보존). 설정에 계정 표시·로그아웃 추가. 기존 일정/검색/백업/렌더
              로직은 그대로 두고 바깥에 인증 층만 씌움. ※ 향후 팀/패밀리 공유는
              userDocRef(다른uid) 재사용 + 보안 규칙 확장으로 얹을 수 있게 설계.
+  - Rev301 : 자잘한 정리. 설정의 로그아웃 버튼을 가로 꽉 채움(.btn.block).
+             로그인 화면의 '업무 캘린더' 부제 제거(DinoPlan 로고만 표시).
   ============================================
 -->
 <html lang="ko">
@@ -699,7 +701,6 @@
 
 <div id="authGate">
   <div class="brand">DinoPlan</div>
-  <div class="tagline">업무 캘린더</div>
   <button type="button" class="gsi-btn" id="googleSignInBtn">
     <svg viewBox="0 0 48 48" aria-hidden="true">
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -767,7 +768,7 @@
 
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
-  <button class="btn ghost" id="signOutBtn">로그아웃</button>
+  <button class="btn block" id="signOutBtn">로그아웃</button>
 </div>
 
 <!-- search result sheet -->
