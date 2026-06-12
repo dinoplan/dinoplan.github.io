@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.03  ·  파일명: Index_Rev303
+  Release Version 3.04  ·  파일명: Index_Rev304
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -93,6 +93,9 @@
   - Rev303 : 시작 화면을 'DinoPlan' 로고 스플래시로 변경(기존 '불러오는 중…'
              대체). 최소 0.8초 표시 후 0.4초 페이드아웃(로딩이 빨라도 깜빡임
              없음, 느려도 자연스럽게 전환). hideSplash로 숨김 로직 일원화.
+  - Rev304 : 공휴일 이름 글자가 넓은 화면(PC)에서 다른 일정보다 크고 굵게
+             튀던 문제 수정. 크기 공식·상한(12px)·굵기(--ev-weight)를 일반
+             막대 일정과 동일하게 맞춤. 색(빨강)은 유지.
   ============================================
 -->
 <html lang="ko">
@@ -265,7 +268,7 @@
   .dnum.sun { color: var(--sun); }
   .dnum.holiday { color: var(--sun); }
   .holiday-name {
-    font-size: clamp(7px, calc(var(--cellw, 60px) / 8.2), 15px); font-weight: 700; color: var(--sun);
+    font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 6.2), 12px); font-weight: var(--ev-weight, 700); color: var(--sun);
     line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     margin-top: 1px; text-align: center; padding: 0 4px; box-sizing: border-box;
   }
