@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.06  ·  파일명: Index_Rev306
+  Release Version 3.08  ·  파일명: Index_Rev308
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -104,6 +104,18 @@
              이전 달은 위에서 내려오며 0.22s 페이드인). 제스처로 넘길 때만
              적용(제목 피커 점프는 기존대로 즉시). 렌더 로직은 그대로 두고
              그려진 그리드에 클래스만 입힘.
+  - Rev307 : 버그 수정 3건. (1) 제목을 눌러 연 년/월 피커에서 목록을 위아래로
+             굴려도 스크롤되지 않던 문제 — 터치 가드가 .picker-col을 자체 스크롤
+             영역으로 인정하지 않아 막혔던 것을 수정(다른 달로 이동 가능).
+             (2) 우상단 코너(직전·다음 달 토/일)에 오는 공휴일의 이름이 표시되지
+             않던 문제 — 주말 칸에서 '현재 달'일 때만 이름을 그리던 조건 제거.
+             (3) (2)와 같은 원인으로, 다음 달 첫날이 주말 코너에 보일 때(예: 2026
+             3/1 일) 이름이 빠지던 것도 함께 해결.
+  - Rev308 : 공휴일 '날짜 숫자 색' 보강. (1) 평일 미리보기 칸(예: 신정 1/1)의
+             다른 달 공휴일 날짜가 회색이던 것을 빨강+흐림으로. (2) 우상단 코너
+             주말이 공휴일이면(예: 2027 추석 9/25토·9/26일) 토/일 모두 빨강+흐림
+             으로 표시하고 이름도 함께(추석연휴 등). month 한정 조건 제거 +
+             .cell.other .dnum.holiday 규칙 추가.
   ============================================
 -->
 <html lang="ko">
@@ -277,6 +289,8 @@
   .week .cell:first-child { border-left: none; }
   .week:last-child .cell { border-bottom: 1px solid var(--line); }
   .cell.other .dnum { color: var(--text-3); }
+  /* 다른 달(미리보기) 공휴일 날짜: 빨강을 유지하되 흐릿하게 */
+  .cell.other .dnum.holiday { color: var(--sun); opacity: 0.5; }
   .dnum { font-size: 13px; color: var(--text-2); line-height: 1.4; }
   .dnum.sat { color: var(--sat); }
   .dnum.sun { color: var(--sun); }
@@ -1070,8 +1084,8 @@ function makeCell(d, isWeekend, todayIso) {
     ? (d.getMonth()+1) + '/' + d.getDate()
     : d.getDate();
   const hol = holidayName(d);
-  if (hol && d.getMonth() === view.getMonth()) {
-    num.classList.add('holiday'); // red date; the name is drawn as a bar (lane 0) for consistent sizing
+  if (hol) {
+    num.classList.add('holiday'); // 공휴일 날짜는 빨강. 다른 달이면 .other의 opacity로 흐릿하게.
   }
   cell.appendChild(num);
   const evWrap = document.createElement('div');
@@ -1098,8 +1112,9 @@ function makeWeekendCell(sat, sun, todayIso) {
     half.appendChild(wd);
 
     // weekend holiday name (e.g. 부처님오신날 on a Sunday)
+    // 코너(직전·다음 달 주말)에 오는 공휴일도 이름을 표시한다.
     const hol = holidayName(d);
-    if (hol && d.getMonth() === view.getMonth()) {
+    if (hol) {
       wd.classList.add('wd-holiday');
       const hn = document.createElement('div');
       hn.className = 'holiday-name';
@@ -1627,10 +1642,12 @@ document.querySelectorAll('#types .type-chip').forEach(chip => {
   let startY = 0;
   let target = null;     // 시트/피커
   let inner = null;      // 시트 안에서 자체 스크롤되는 영역(textarea 등)
-  // 세로로 스크롤 가능한 요소인지
+  // 세로로 스크롤 가능한 요소인지 (textarea + overflow 걸린 영역: 피커 목록 등)
   function scrollableEl(el) {
     while (el && el !== document.body) {
       if (el.tagName === 'TEXTAREA' && el.scrollHeight > el.clientHeight) return el;
+      // 피커의 년/월 목록(.picker-col)처럼 overflow-y로 자체 스크롤되는 영역
+      if (el.classList && el.classList.contains('picker-col') && el.scrollHeight > el.clientHeight) return el;
       el = el.parentElement;
     }
     return null;
