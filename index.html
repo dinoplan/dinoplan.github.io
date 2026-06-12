@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.12  ·  파일명: Index_Rev312
+  Release Version 3.13  ·  파일명: Index_Rev313
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -129,6 +129,9 @@
   - Rev312 : 직전/다음 달 '일반 일정' 막대도 흐릿하게(기존엔 날짜만 흐리고
              일정 내용은 진했음). 막대가 걸친 첫 칸이 다른 달이면 .other-ev
              (opacity 0.5). 이로써 다른 달 표시(날짜·공휴일·일반일정)가 모두 통일.
+  - Rev313 : 달력 끝줄 주말칸에 오는 직전/다음 달 주말(예: 7/4·7/5) 일정 내용도
+             흐릿하게. Rev312는 평일 막대만 처리했고 주말칸 일정(.wevs)은 빠져
+             있었음. other-ev 흐림을 .bar와 .wevs 공통으로 적용.
   ============================================
 -->
 <html lang="ko">
@@ -400,8 +403,8 @@
   .bar.holiday-bar.other { opacity: 0.5; }
   /* 주말칸의 직전/다음 달 공휴일 이름도 흐릿하게 */
   .holiday-name.other-hol { opacity: 0.5; }
-  /* 직전/다음 달 일반 일정 막대도 흐릿하게 (날짜와 통일) */
-  .bar.other-ev { opacity: 0.5; }
+  /* 직전/다음 달 일반 일정도 흐릿하게 (막대 .bar, 주말칸 .wevs 공통) */
+  .bar.other-ev, .wevs.other-ev { opacity: 0.5; }
   /* line that fills the space between the label and the arrowhead */
   .bar .line { flex: 1 1 2px; height: 0; border-top: 1.5px solid currentColor; min-width: 0; }
   /* arrowhead drawn as a CSS triangle, sitting flush on the line */
@@ -1169,6 +1172,8 @@ function makeWeekendCell(sat, sun, todayIso) {
     if (dayEvents.length) {
       const wevs = document.createElement('div');
       wevs.className = 'wevs';
+      // 직전/다음 달 주말(예: 달력 끝줄의 7/4·7/5)의 일정 내용도 흐릿하게
+      if (d.getMonth() !== view.getMonth()) wevs.classList.add('other-ev');
       dayEvents.slice(0,3).forEach(e => {
         const row = document.createElement('div');
         row.className = 'we-ev';
