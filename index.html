@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.01  ·  파일명: Index_Rev301
+  Release Version 3.02  ·  파일명: Index_Rev302
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -87,6 +87,9 @@
              userDocRef(다른uid) 재사용 + 보안 규칙 확장으로 얹을 수 있게 설계.
   - Rev301 : 자잘한 정리. 설정의 로그아웃 버튼을 가로 꽉 채움(.btn.block).
              로그인 화면의 '업무 캘린더' 부제 제거(DinoPlan 로고만 표시).
+  - Rev302 : 로그아웃 버튼을 내보내기/가져오기와 같은 음영 배경(.ghost)으로
+             통일하고 가로 한 줄 꽉 채움. .btn.block은 폭/여백만 담당하도록
+             정리(배경·글자색은 함께 붙는 .ghost 등이 결정).
   ============================================
 -->
 <html lang="ko">
@@ -482,12 +485,11 @@
   .row2 { display: flex; gap: 10px; }
   .row2 > div { flex: 1; }
   .actions { display: flex; gap: 10px; margin-top: 14px; }
+  /* 단독으로 한 줄 꽉 채우는 버튼(로그아웃 등) — 폭/여백만 담당.
+     배경·글자색은 함께 붙는 .ghost/.primary 등이 결정한다. */
   .btn.block {
-    display: block; width: 100%; margin-top: 10px; padding: 13px;
-    border: 1px solid var(--line-strong); background: var(--bg); color: var(--text);
-    border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+    display: block; width: 100%; flex: none; margin-top: 10px;
   }
-  .btn.block:active { background: var(--surface); }
   .set-row { font-size: 14px; color: var(--text-2); margin: 6px 0 12px; }
   .set-hint { font-size: 12px; color: var(--text-3); margin-top: 12px; line-height: 1.5; }
   .btn {
@@ -768,7 +770,7 @@
 
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
-  <button class="btn block" id="signOutBtn">로그아웃</button>
+  <button class="btn ghost block" id="signOutBtn">로그아웃</button>
 </div>
 
 <!-- search result sheet -->
