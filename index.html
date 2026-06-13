@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.24  ·  파일명: Index_Rev324
+  Release Version 3.25  ·  파일명: Index_Rev325
   ============================================
   ★ 안정 버전 (STABLE / 3.23) — 캐릭터·아이콘 + 배포 형태(로그인 필수) + 인앱
     브라우저 안내 + 종이(크림) 테마까지 확정 지점. 이후 작업은 여기서 이어간다.
@@ -189,6 +189,9 @@
   - Rev324 : 검색 결과 목록의 제목도 종류별 색으로 표시(업무=검정, 중요=파랑,
              개인=초록, 휴일=빨강). 상세 시트와 동일한 evTextColor 규칙 재사용
              (다크모드 자동 보정 포함). 검색어 형광펜 강조는 그대로 유지.
+  - Rev325 : 검색 결과 항목 전체(날짜·"날짜:"/"내용:" 라벨·제목·내용)를 종류색으로
+             통일. .sr-item에 색을 주고 하위 요소는 color:inherit로 상속, 제목은
+             진하게/나머지는 opacity로 살짝 흐리게 해 위계 유지. 형광펜 강조 유지.
   ============================================
 -->
 <html lang="ko">
@@ -547,10 +550,10 @@
   }
   .sr-item:active { opacity: .8; }
   .sr-line { font-size: 13px; line-height: 1.5; }
-  .sr-line .k { color: var(--text-3); font-weight: 700; }
-  .sr-date { color: var(--text-2); }
-  .sr-title { color: var(--text); font-weight: 700; font-size: 15px; margin: 2px 0; }
-  .sr-memo { color: var(--text-2); white-space: pre-wrap; word-break: break-word; }
+  .sr-line .k { color: inherit; opacity: 0.65; font-weight: 700; }
+  .sr-date { color: inherit; opacity: 0.8; }
+  .sr-title { color: inherit; font-weight: 700; font-size: 15px; margin: 2px 0; }
+  .sr-memo { color: inherit; opacity: 0.8; white-space: pre-wrap; word-break: break-word; }
   .sr-hl { background: rgba(255,213,0,0.45); border-radius: 2px; padding: 0 1px; }
   @media (prefers-color-scheme: dark) { .sr-hl { background: rgba(255,213,0,0.30); color: #fff; } }
 
@@ -2057,10 +2060,12 @@ function showSearchResults(q) {
     hits.forEach(e => {
       const item = document.createElement('div');
       item.className = 'sr-item';
+      const col = evTextColor(e);
+      item.style.color = col;                 // 항목 전체 글자색을 종류색으로
       const dateStr = (e.start === e.end) ? e.start : (e.start + ' ~ ' + e.end);
       let html = '';
       html += '<div class="sr-line"><span class="k">날짜: </span><span class="sr-date">' + escapeHtml(dateStr) + '</span></div>';
-      html += '<div class="sr-title" style="color:' + evTextColor(e) + '">' + highlight(e.title || '', q) + '</div>';
+      html += '<div class="sr-title">' + highlight(e.title || '', q) + '</div>';
       if (e.memo) {
         html += '<div class="sr-line"><span class="k">내용:</span></div>';
         html += '<div class="sr-memo">' + highlight(e.memo, q) + '</div>';
