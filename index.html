@@ -2,10 +2,10 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.23  ·  파일명: Index_Rev323
+  Release Version 3.24  ·  파일명: Index_Rev324
   ============================================
-  ★ 안정 버전 (STABLE) — 캐릭터/아이콘 도입 + 배포 형태(로그인 필수) 확정 지점.
-    이후 작업은 여기서 이어간다.
+  ★ 안정 버전 (STABLE / 3.23) — 캐릭터·아이콘 + 배포 형태(로그인 필수) + 인앱
+    브라우저 안내 + 종이(크림) 테마까지 확정 지점. 이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -186,6 +186,9 @@
              CSS 변수에서 흐르므로 기능/로직 변경은 없음.
   - Rev323 : 종이 톤을 한 단계 더 진하게. 배경 크림색 #efe9dd→#e8dfc9, surface도 살짝
              올림. theme-color·스플래시·로그인 배경까지 같은 톤으로 통일. (색만 조정)
+  - Rev324 : 검색 결과 목록의 제목도 종류별 색으로 표시(업무=검정, 중요=파랑,
+             개인=초록, 휴일=빨강). 상세 시트와 동일한 evTextColor 규칙 재사용
+             (다크모드 자동 보정 포함). 검색어 형광펜 강조는 그대로 유지.
   ============================================
 -->
 <html lang="ko">
@@ -2057,7 +2060,7 @@ function showSearchResults(q) {
       const dateStr = (e.start === e.end) ? e.start : (e.start + ' ~ ' + e.end);
       let html = '';
       html += '<div class="sr-line"><span class="k">날짜: </span><span class="sr-date">' + escapeHtml(dateStr) + '</span></div>';
-      html += '<div class="sr-title">' + highlight(e.title || '', q) + '</div>';
+      html += '<div class="sr-title" style="color:' + evTextColor(e) + '">' + highlight(e.title || '', q) + '</div>';
       if (e.memo) {
         html += '<div class="sr-line"><span class="k">내용:</span></div>';
         html += '<div class="sr-memo">' + highlight(e.memo, q) + '</div>';
