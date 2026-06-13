@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.22  ·  파일명: Index_Rev322
+  Release Version 3.23  ·  파일명: Index_Rev323
   ============================================
   ★ 안정 버전 (STABLE) — 캐릭터/아이콘 도입 + 배포 형태(로그인 필수) 확정 지점.
     이후 작업은 여기서 이어간다.
@@ -184,6 +184,8 @@
              맞춰 조정. 다크 모드도 차가운 회색→갈색이 도는 따뜻한 짙은 톤으로 재조정.
              주말칸 음영을 은은하게 낮추고 theme-color 메타도 크림색으로. 색은 전부
              CSS 변수에서 흐르므로 기능/로직 변경은 없음.
+  - Rev323 : 종이 톤을 한 단계 더 진하게. 배경 크림색 #efe9dd→#e8dfc9, surface도 살짝
+             올림. theme-color·스플래시·로그인 배경까지 같은 톤으로 통일. (색만 조정)
   ============================================
 -->
 <html lang="ko">
@@ -194,7 +196,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#efe9dd">
+<meta name="theme-color" content="#e8dfc9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="DinoPlan">
@@ -204,8 +206,8 @@
 <style>
   :root {
     /* 종이(크레용) 테마 — 크림색 배경에 잉크빛 선/글자 */
-    --bg: #efe9dd;          /* 스플래시·로그인과 같은 크림색 */
-    --surface: #e7e0d1;     /* 살짝 진한 크림 (입력칸·칩 배경) */
+    --bg: #e8dfc9;          /* 크림 종이색 (한 톤 진하게) */
+    --surface: #ddd2b8;     /* 살짝 진한 크림 (입력칸·칩 배경) */
     --line: rgba(90,72,45,0.18);       /* 연필선 느낌의 갈색빛 옅은 선 */
     --line-strong: rgba(90,72,45,0.32);
     --text: #3a3327;        /* 먹색에 가까운 진한 갈색 */
@@ -690,7 +692,7 @@
   }
   /* 캐릭터 그림이 종이(크림색) 질감이라, 스플래시·로그인 배경도 같은 크림색으로
      통일해 네모 경계가 보이지 않게 한다(다크모드에서도 동일). */
-  #authSplash, #authGate { background: #efe9dd !important; color: #2c2c2a !important; }
+  #authSplash, #authGate { background: #e8dfc9 !important; color: #2c2c2a !important; }
   #authGate .brand { color: #2f7d6e !important; }
   #authGate .auth-hint { color: #8a8578 !important; }
 
