@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.26  ·  파일명: Index_Rev326
+  Release Version 3.27  ·  파일명: Index_Rev327
   ============================================
   ★ 안정 버전 (STABLE / 3.23) — 캐릭터·아이콘 + 배포 형태(로그인 필수) + 인앱
     브라우저 안내 + 종이(크림) 테마까지 확정 지점. 이후 작업은 여기서 이어간다.
@@ -193,6 +193,10 @@
              올린(#e8dfc9) 뒤 이미지 가장자리가 옛 톤이라 네모로 떠 보이던 문제를,
              가장자리를 훨씬 강하게 페이드시키고 배경색(#e8dfc9)을 이미지에 사전
              합성해 해결. 그림 외곽이 살짝 부드러워졌지만 경계 자국 없이 자연스러움.
+  - Rev327 : 붉은색 통일. 유저가 만든 '휴일일정' 색(#d63a3a)이 국가공휴일·일요일
+             (--sun #b6493b)과 살짝 달랐던 것을, 종이톱 --sun으로 통일(다크는
+             #e8897c). 휴일 종류 칩 선택색도 동일하게 맞춤. 이제 공휴일·일요일·
+             휴일일정 세 빨강이 모두 같은 색.
   ============================================
 -->
 <html lang="ko">
@@ -591,7 +595,7 @@
   }
   .type-chip[data-t=work].sel { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
   .type-chip[data-t=important].sel { background:#2563a8; color:#fff; border-color:#2563a8; }
-  .type-chip[data-t=holiday].sel { background:#d63a3a; color:#fff; border-color:#d63a3a; }
+  .type-chip[data-t=holiday].sel { background:#b6493b; color:#fff; border-color:#b6493b; }
   .type-chip[data-t=personal].sel { background:#1d9e75; color:#fff; border-color:#1d9e75; }
   .type-chip.chip-disabled { opacity: 0.35; pointer-events: none; }
   #weekendHint { display: none; }
@@ -1104,8 +1108,8 @@ function holidayName(d) {
 
 // pastel background palette (10) + event type text colors
 const PALETTE = ['#ff8fa3','#ffb56b','#ffe66d','#8fe388','#5ad2f4','#6c9bff','#b388ff','#ff7ec7','#c0c0c8'];
-const TYPE_COLORS = { work:'#1a1a1a', important:'#2563a8', holiday:'#d63a3a', personal:'#1d9e75' };
-const TYPE_COLORS_DARK = { work:'#f2f2f2', important:'#7fb3ed', holiday:'#ff8080', personal:'#5fd3a8' };
+const TYPE_COLORS = { work:'#1a1a1a', important:'#2563a8', holiday:'#b6493b', personal:'#1d9e75' };
+const TYPE_COLORS_DARK = { work:'#f2f2f2', important:'#7fb3ed', holiday:'#e8897c', personal:'#5fd3a8' };
 function isDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
 function evTextColor(e){
   const t = e.type || 'work';
