@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 3.28  ·  파일명: Index_Rev328
+  Release Version 3.29  ·  파일명: Index_Rev329
   ============================================
   ★ 안정 버전 (STABLE / 3.27) — 캐릭터·아이콘 + 배포 형태(로그인 필수) + 인앱
     브라우저 안내 + 종이(크림) 테마 + 검색 제목색 + 붉은색 통일까지 확정 지점.
@@ -203,6 +203,11 @@
              '휴일일정'이 달력에서 숨음(날짜 눌러 상세엔 보임). 설정은 기기에
              저장돼 유지. holidayShown()·isVisibleType() 헬퍼로 처리. 일요일 날짜
              빨강은 '요일 색'이므로 그대로 유지.
+  - Rev329 : 휴일 토글을 꺼도 공휴일 '날짜 숫자 색(빨강)'은 항상 유지하도록 수정.
+             이전엔 끄면 날짜 색까지 평일/요일색으로 돌아갔음(특히 토요일 공휴일이
+             파랑으로). 평일·주말·코너 세 곳의 날짜 색은 holidayName(항상),
+             이름·막대는 holidayShown(토글)으로 분리. 이제 공휴일 날짜는 토글과
+             무관하게 늘 빨강(토요일 공휴일도 파랑→빨강 유지), 이름만 숨겨짐.
   ============================================
 -->
 <html lang="ko">
@@ -1198,8 +1203,9 @@ function render() {
     const dlabel = document.createElement('span');
     dlabel.className = 'cdate';
     dlabel.textContent = fmtMD(d);
-    const cornerHol = holidayShown(d);
-    if (cornerHol) dlabel.classList.add('holiday');   // 공휴일이면 날짜를 빨강(흐림)
+    const cornerHolColor = holidayName(d);   // 코너 날짜 색은 항상 공휴일 빨강
+    const cornerHol = holidayShown(d);        // 코너 공휴일 이름은 토글 반영
+    if (cornerHolColor) dlabel.classList.add('holiday');   // 공휴일이면 날짜를 빨강(흐림)
     row.appendChild(dlabel);
 
     const di = iso(d);
@@ -1269,7 +1275,7 @@ function makeCell(d, isWeekend, todayIso) {
   num.textContent = (d.getMonth() !== view.getMonth())
     ? (d.getMonth()+1) + '/' + d.getDate()
     : d.getDate();
-  const hol = holidayShown(d);
+  const hol = holidayName(d);   // 날짜 숫자 색은 토글과 무관하게 항상 공휴일 빨강
   if (hol) {
     num.classList.add('holiday'); // 공휴일 날짜는 빨강. 다른 달이면 .other의 opacity로 흐릿하게.
   }
@@ -1299,14 +1305,17 @@ function makeWeekendCell(sat, sun, todayIso) {
 
     // weekend holiday name (e.g. 부처님오신날 on a Sunday)
     // 코너(직전·다음 달 주말)에 오는 공휴일도 이름을 표시한다.
-    const hol = holidayShown(d);
-    if (hol) {
-      wd.classList.add('wd-holiday');
+    const holColor = holidayName(d);   // 날짜 색은 토글과 무관하게 항상
+    const holShow  = holidayShown(d);  // 이름 표시는 토글 반영
+    if (holColor) {
+      wd.classList.add('wd-holiday');  // 토요일이 공휴일이어도 파랑→빨강 유지
+    }
+    if (holShow) {
       const hn = document.createElement('div');
       hn.className = 'holiday-name';
       // 직전/다음 달 주말 공휴일 이름은 흐릿하게 (날짜와 통일)
       if (d.getMonth() !== view.getMonth()) hn.classList.add('other-hol');
-      hn.textContent = hol;
+      hn.textContent = holShow;
       half.appendChild(hn);
     }
 
