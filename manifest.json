@@ -1,0 +1,29 @@
+{
+  "name": "DinoPlan",
+  "short_name": "DinoPlan",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "browser",
+  "background_color": "#e8dfc9",
+  "theme_color": "#e8dfc9",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
