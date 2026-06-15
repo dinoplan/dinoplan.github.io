@@ -6,7 +6,8 @@
   ============================================
   ★ 안정 버전 (STABLE / 6.03) — standalone 정식 배포본 위에 헤더 4종 토글
     (업무·중요·개인·휴일) 추가 + 달 넘김(위로 드래그) 시 헤더·요일줄 흔들림
-    해결 + 입력칸 자동채우기 줄(열쇠·카드·위치) 차단. 정식 배포 상태.
+    해결 + 입력칸 자동채우기 줄(열쇠·카드·위치) 차단 + 검색 결과 시트 겹침
+    해결(검색 시 설정 시트 닫고 종료 시 복귀). 정식 배포 상태.
     이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
@@ -262,6 +263,11 @@
              spellcheck=false, data-form-type=other, data-lpignore, data-1p-ignore)
              를 부여 — 삼성 키보드에서 자동채우기 줄 사라짐 확인. ※ 키보드 자체의
              글자 추천(예: '오라'→오라버니)은 키보드 기능이라 그대로 유지됨.
+             + 검색 결과 시트 겹침 해결: 검색을 실행하면 설정 시트를 닫고 검색
+             시트만 띄운다(결과가 0~소수일 때 검색 시트가 짧아지며 뒤의 설정
+             시트가 비쳐 제목·핸들이 이중으로 보이던 문제 제거). 검색을 닫으면
+             (닫기 버튼·폰 뒤로가기) 설정 시트로 자동 복귀. 검색→항목→수정→뒤로
+             동선은 기존대로 검색 목록 복귀 유지. searchFromSettings 플래그로 제어.
   ============================================
 -->
 <html lang="ko">
@@ -1144,6 +1150,7 @@ let editingId = null;
 let lastSelectedDate = null;
 let lastSearchQuery = '';   // 마지막 검색어 (뒤로가기로 목록 복원용)
 let cameFromSearch = false; // 수정 화면이 검색을 거쳐 열렸는지
+let searchFromSettings = false; // 검색을 설정 시트에서 시작했는지(검색 종료 시 설정으로 복귀할지 판단)
 let _navActive = false;     // 검색 목록이 history에 한 단계 쌓여 있는지
 let showWork = (localStorage.getItem('workcal.showWork') !== 'off');         // 업무일정 달력 표시 여부(기본 표시)
 let showImportant = (localStorage.getItem('workcal.showImportant') !== 'off'); // 중요일정 달력 표시 여부(기본 표시)
@@ -1772,6 +1779,7 @@ function closeAll() {
   $('scrim').classList.remove('open');
   unlockBack();
   cameFromSearch = false;
+  searchFromSettings = false;
   if (_navActive) { _navActive = false; history.back(); }
 }
 
@@ -2210,6 +2218,8 @@ function highlight(text, q) {
 function runSearch() {
   const q = $('searchInput').value.trim();
   if (!q) { $('searchInput').focus(); return; }
+  // 이 검색은 설정 시트에서 시작된 것 — 검색을 끝낼 때 설정 시트로 되돌아간다.
+  searchFromSettings = $('settingsSheet').classList.contains('open');
   // 키보드를 먼저 내린다
   $('searchInput').blur();
   // 키보드가 내려가는 동안(뷰포트가 다시 커지는 동안) 잠깐 기다렸다가 결과 시트를 올린다
@@ -2246,6 +2256,10 @@ function showSearchResults(q) {
       wrap.appendChild(item);
     });
   }
+  // 설정 시트가 열려 있으면 닫는다 — 검색 시트가 그 위에 겹쳐 뜨면서
+  // 결과가 적을 때 뒤의 설정 시트가 비쳐 보이는 문제를 막는다.
+  // (검색을 닫을 때 searchFromSettings 플래그로 설정 시트를 다시 띄운다.)
+  $('settingsSheet').classList.remove('open');
   showSheet('searchSheet');
   // 폰 뒤로가기로 이 목록을 닫을 수 있도록 history에 표시
   pushNav();
@@ -2258,6 +2272,11 @@ $('searchBtn').onclick = runSearch;
 $('closeSearch').onclick = () => {
   closeSheet('searchSheet');
   if (_navActive) { _navActive = false; history.back(); }
+  // 검색을 설정에서 시작했다면 설정 시트로 되돌아간다.
+  if (searchFromSettings) {
+    searchFromSettings = false;
+    openSettings();
+  }
 };
 $('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
 
@@ -2436,6 +2455,11 @@ window.addEventListener('popstate', () => {
   // 검색 목록이 열려 있으면 → 닫기
   if ($('searchSheet').classList.contains('open')) {
     closeSheet('searchSheet');
+    // 검색을 설정에서 시작했다면 설정 시트로 되돌아간다(닫기 버튼과 동일 동작).
+    if (searchFromSettings) {
+      searchFromSettings = false;
+      openSettings();
+    }
   }
 });
 // re-render on rotation / window resize so font size & lane count match new cell width
