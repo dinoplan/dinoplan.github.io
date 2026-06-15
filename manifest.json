@@ -3,7 +3,7 @@
   "short_name": "DinoPlan",
   "start_url": "/index.html",
   "scope": "/",
-  "display": "browser",
+  "display": "standalone",
   "background_color": "#e8dfc9",
   "theme_color": "#e8dfc9",
   "icons": [
