@@ -1042,7 +1042,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.601</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.601-test1</div>
 </div>
 
 <!-- search result sheet -->
@@ -2034,6 +2034,19 @@ document.querySelectorAll('#types .type-chip').forEach(chip => {
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
   }, { passive: true });
+
+  // [흔들림 검증] 세로로 끄는 동안 브라우저 기본 동작(스크롤·주소창 움찔)을 막는다.
+  // 위로 드래그 시 헤더/요일줄이 흔들리는 원인 후보를 차단하는 실험.
+  gridEl.addEventListener('touchmove', (e) => {
+    if (!tracking || blocked()) return;
+    const t = e.touches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    // 세로 우세 드래그면 기본 동작 차단
+    if (Math.abs(dy) > Math.abs(dx)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
 
   gridEl.addEventListener('touchend', (e) => {
     if (!tracking || blocked()) return;
