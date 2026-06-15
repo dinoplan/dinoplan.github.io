@@ -2,13 +2,11 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.03  ·  파일명: Index_Rev603
+  Release Version 6.04  ·  파일명: Index_Rev604
   ============================================
-  ★ 안정 버전 (STABLE / 6.03) — standalone 정식 배포본 위에 헤더 4종 토글
-    (업무·중요·개인·휴일) 추가 + 달 넘김(위로 드래그) 시 헤더·요일줄 흔들림
-    해결 + 입력칸 자동채우기 줄(열쇠·카드·위치) 차단 + 검색 결과 시트 겹침
-    해결(검색 시 설정 시트 닫고 종료 시 복귀). 정식 배포 상태.
-    이후 작업은 여기서 이어간다.
+  ★ 안정 버전 (STABLE / 6.04) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
+    자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
+    & 수정 이력(날짜·시:분). 메모는 현재 로컬 저장. 이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -268,6 +266,16 @@
              시트가 비쳐 제목·핸들이 이중으로 보이던 문제 제거). 검색을 닫으면
              (닫기 버튼·폰 뒤로가기) 설정 시트로 자동 복귀. 검색→항목→수정→뒤로
              동선은 기존대로 검색 목록 복귀 유지. searchFromSettings 플래그로 제어.
+  - Rev604 : [To-Do 메모장 추가] 달력에서 왼쪽으로 드래그하면 오른쪽에서 전체
+             메모장 패널이 슬라이드로 등장. 제목 없는 빈 메모장 하나(자유 입력).
+             상단 얇은 바: 왼쪽 '‹ 달력'(닫기) / 오른쪽 History 아이콘. 메모장에서
+             오른쪽 드래그 또는 '달력' 버튼으로 닫음. 닫을 때 본문을 로컬 저장하고,
+             열었을 때와 내용이 다르면 수정 이력에 스냅샷 1개(날짜+시:분) 추가
+             (변경 없으면 추가 안 함, 최근 500개 상한). History 아이콘 → 전체 큰
+             창에 이력을 날짜+시:분별로 최신순 나열(아래로 스크롤), 맨 아래 닫기.
+             폰 뒤로가기로 이력창→메모장→달력 순으로 단계적으로 닫힘. ※ 저장은
+             현재 로컬(localStorage)만 — 클라우드 동기화는 다음 버전에서 별도 칸으로
+             추가 예정(일정 동기화에 영향 없도록). 일정/검색/달 넘김 로직은 불변.
   ============================================
 -->
 <html lang="ko">
@@ -589,6 +597,65 @@
   }
   .bar.cont-l { border-top-left-radius: 0; border-bottom-left-radius: 0; }
   .bar.cont-r { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+  /* ===== To-Do 메모장 패널 ===== */
+  #memoPanel {
+    position: fixed; inset: 0; z-index: 30;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateX(100%);
+    transition: transform .26s cubic-bezier(.2,.8,.2,1);
+  }
+  #memoPanel.open { transform: translateX(0); }
+  .memo-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; border-bottom: 1px solid var(--surface);
+  }
+  .memo-bar-btn {
+    display: flex; align-items: center; gap: 4px;
+    background: none; border: none; color: var(--text);
+    font-size: 15px; font-weight: 600; padding: 6px 8px; cursor: pointer;
+    border-radius: 8px;
+  }
+  .memo-bar-btn:active { background: var(--surface); }
+  .memo-bar-btn.icon-only { color: var(--text-2); }
+  #memoText {
+    flex: 1; width: 100%; box-sizing: border-box;
+    border: none; outline: none; resize: none;
+    background: var(--bg); color: var(--text);
+    font-size: 16px; line-height: 1.6;
+    padding: 14px; font-family: inherit;
+    /* 메모장 안 세로 스크롤만 — 좌우 제스처가 패널을 닫지 않도록 */
+    touch-action: pan-y;
+    padding-bottom: calc(14px + var(--kb, 0px));
+  }
+  /* ===== 메모 수정 이력 (전체 큰 창) ===== */
+  #memoHistory {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    /* 달력처럼 위쪽 공간을 남긴다(상태바 + 약간) */
+    top: calc(env(safe-area-inset-top) + 36px);
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    display: flex; flex-direction: column;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.18);
+  }
+  #memoHistory.open { transform: translateY(0); }
+  .mh-head { padding: 16px 18px 8px; }
+  .mh-head h2 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text); }
+  .mh-list {
+    flex: 1; overflow-y: auto; padding: 4px 18px 8px;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  .mh-item {
+    padding: 12px 0; border-bottom: 1px solid var(--surface);
+  }
+  .mh-when { font-size: 12px; color: var(--text-3); margin-bottom: 5px; }
+  .mh-body { font-size: 14px; line-height: 1.55; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .mh-empty { color: var(--text-3); text-align: center; padding: 40px 0; }
+  .mh-foot { padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); }
 
   /* sheet */
   .scrim {
@@ -1027,6 +1094,29 @@
   <div class="grid" id="grid"></div>
 </div>
 
+<!-- ===== To-Do 메모장 패널 (오른쪽에서 슬라이드 인) ===== -->
+<div id="memoPanel">
+  <div class="memo-bar">
+    <button type="button" class="memo-bar-btn" id="memoBack" aria-label="달력으로">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>달력</span>
+    </button>
+    <button type="button" class="memo-bar-btn icon-only" id="memoHistoryBtn" aria-label="수정 이력">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 15 14"/></svg>
+    </button>
+  </div>
+  <textarea id="memoText" placeholder="메모를 입력하세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></textarea>
+</div>
+
+<!-- ===== 메모 수정 이력 (전체 큰 창) ===== -->
+<div id="memoHistory">
+  <div class="mh-head"><h2>메모 수정 이력</h2></div>
+  <div class="mh-list" id="memoHistoryList"></div>
+  <div class="mh-foot">
+    <button type="button" class="btn primary" id="memoHistoryClose">닫기</button>
+  </div>
+</div>
+
 <!-- year/month picker -->
 <div class="scrim" id="pickerScrim"></div>
 <div class="picker" id="picker">
@@ -1062,7 +1152,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.603</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.604</div>
 </div>
 
 <!-- search result sheet -->
@@ -1183,6 +1273,84 @@ function showToast(text) {
 const pad = n => String(n).padStart(2,'0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
 const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+
+/* ===== To-Do 메모장 (로컬 저장) ===== */
+const MEMO_KEY = 'workcal.memo.v1';        // 현재 메모 본문
+const MEMO_HIST_KEY = 'workcal.memoHist.v1'; // 수정 이력 배열 [{at, text}]
+let memoText = '';
+let memoHistory = [];
+let _memoOpenSnapshot = '';   // 메모장 열 때의 내용(닫을 때 변경 여부 비교용)
+
+function loadMemo() {
+  try { memoText = localStorage.getItem(MEMO_KEY) || ''; } catch(e) { memoText = ''; }
+  try { memoHistory = JSON.parse(localStorage.getItem(MEMO_HIST_KEY) || '[]'); }
+  catch(e) { memoHistory = []; }
+  if (!Array.isArray(memoHistory)) memoHistory = [];
+}
+function saveMemoBody() {
+  try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+}
+function saveMemoHistory() {
+  try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {}
+}
+// 'YYYY.MM.DD HH:MM' 표시
+function fmtWhen(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '.' + pad(d.getMonth()+1) + '.' + pad(d.getDate())
+    + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function openMemo() {
+  const ta = $('memoText');
+  ta.value = memoText;
+  _memoOpenSnapshot = memoText;   // 열 때 내용 기억
+  $('memoPanel').classList.add('open');
+  lockBack();
+  pushNav();
+}
+function closeMemo() {
+  const ta = $('memoText');
+  const now = ta.value;
+  // 본문 저장
+  memoText = now;
+  saveMemoBody();
+  // 열었을 때와 내용이 다르면 이력에 스냅샷 1개 추가(날짜+시:분)
+  if (now !== _memoOpenSnapshot) {
+    memoHistory.unshift({ at: Date.now(), text: now });
+    // 이력이 무한정 쌓이지 않게 상한(최근 500개)
+    if (memoHistory.length > 500) memoHistory.length = 500;
+    saveMemoHistory();
+  }
+  $('memoPanel').classList.remove('open');
+  // 키보드 내려가도록 포커스 해제
+  ta.blur();
+  if (!document.querySelector('.sheet.open, .picker.open, #memoHistory.open')) unlockBack();
+  if (_navActive) { _navActive = false; history.back(); }
+}
+function openMemoHistory() {
+  const wrap = $('memoHistoryList');
+  wrap.innerHTML = '';
+  if (!memoHistory.length) {
+    wrap.innerHTML = '<div class="mh-empty">아직 저장된 수정 이력이 없습니다</div>';
+  } else {
+    memoHistory.forEach(h => {
+      const it = document.createElement('div');
+      it.className = 'mh-item';
+      const when = document.createElement('div');
+      when.className = 'mh-when';
+      when.textContent = fmtWhen(h.at);
+      const body = document.createElement('div');
+      body.className = 'mh-body';
+      body.textContent = h.text || '(빈 메모)';
+      it.appendChild(when); it.appendChild(body);
+      wrap.appendChild(it);
+    });
+  }
+  $('memoHistory').classList.add('open');
+}
+function closeMemoHistory() {
+  $('memoHistory').classList.remove('open');
+}
+
 
 function load() {
   try { return JSON.parse(localStorage.getItem(STORE)) || []; }
@@ -2078,7 +2246,12 @@ document.querySelectorAll('#types .type-chip').forEach(chip => {
     const t = e.changedTouches[0];
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
-    // 세로로 충분히, 그리고 가로보다 세로로 더 많이 움직였을 때만
+    // 가로 우세 + 충분한 거리 → 좌우 스와이프 (메모장)
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) >= SWIPE_MIN) {
+      if (dx < 0) openMemo();   // 왼쪽으로 밀면 메모장 열기
+      return;                   // 오른쪽으로 민 경우는 달력에서 할 일 없음
+    }
+    // 세로로 충분히, 그리고 가로보다 세로로 더 많이 움직였을 때만 → 달 넘김
     if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) <= Math.abs(dx)) return;
     goMonth(dy < 0 ? 1 : -1);   // 위로 밀면(dy<0) 다음 달
   }, { passive: true });
@@ -2269,6 +2442,26 @@ $('exportBtn').onclick = exportBackup;
 $('importBtn').onclick = () => $('importFile').click();
 $('importFile').onchange = (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
 $('searchBtn').onclick = runSearch;
+// 메모장 버튼들
+$('memoBack').onclick = closeMemo;
+$('memoHistoryBtn').onclick = openMemoHistory;
+$('memoHistoryClose').onclick = closeMemoHistory;
+// 메모장에서 오른쪽으로 드래그하면 달력으로 닫기 (가로 우세 + 충분한 거리)
+(function(){
+  const panel = $('memoPanel');
+  let mx = 0, my = 0, mt = false;
+  panel.addEventListener('touchstart', (e) => {
+    mt = true; mx = e.touches[0].clientX; my = e.touches[0].clientY;
+  }, { passive: true });
+  panel.addEventListener('touchend', (e) => {
+    if (!mt) return; mt = false;
+    if ($('memoHistory').classList.contains('open')) return; // 이력 열려있으면 무시
+    const t = e.changedTouches[0];
+    const dx = t.clientX - mx;
+    const dy = t.clientY - my;
+    if (dx > SWIPE_MIN && Math.abs(dx) > Math.abs(dy)) closeMemo();
+  }, { passive: true });
+})();
 $('closeSearch').onclick = () => {
   closeSheet('searchSheet');
   if (_navActive) { _navActive = false; history.back(); }
@@ -2283,6 +2476,8 @@ $('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e
 render();
 // after first paint, cell height is known — re-render once so lane count is accurate
 requestAnimationFrame(() => requestAnimationFrame(render));
+// 메모 본문·이력 초기 로드(로컬)
+loadMemo();
 
 /* ===== 인증 + 클라우드 연동 (3.0) =====
    흐름:
@@ -2445,6 +2640,28 @@ function pushNav() {
 window.addEventListener('popstate', () => {
   if (!_navActive) return;
   _navActive = false;
+  // 메모 이력창이 열려 있으면 → 그것부터 닫기 (메모장은 유지)
+  if ($('memoHistory').classList.contains('open')) {
+    closeMemoHistory();
+    pushNav();   // 메모장은 아직 열려 있으니 뒤로가기 단계를 다시 쌓아둠
+    return;
+  }
+  // 메모장이 열려 있으면 → 닫기(내용 저장·이력 반영)
+  if ($('memoPanel').classList.contains('open')) {
+    _navActive = false;
+    // closeMemo가 history.back을 또 부르지 않도록 _navActive를 먼저 끈 상태로 처리
+    const ta = $('memoText');
+    memoText = ta.value; saveMemoBody();
+    if (memoText !== _memoOpenSnapshot) {
+      memoHistory.unshift({ at: Date.now(), text: memoText });
+      if (memoHistory.length > 500) memoHistory.length = 500;
+      saveMemoHistory();
+    }
+    $('memoPanel').classList.remove('open');
+    ta.blur();
+    if (!document.querySelector('.sheet.open, .picker.open')) unlockBack();
+    return;
+  }
   // 검색을 거쳐 들어온 수정 화면이 열려 있으면 → 검색 목록으로 복귀
   if ($('editSheet').classList.contains('open') && cameFromSearch) {
     cameFromSearch = false;
