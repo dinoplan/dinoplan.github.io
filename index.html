@@ -2,12 +2,11 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.00  ·  파일명: Index_Rev600
+  Release Version 6.02  ·  파일명: Index_Rev602
   ============================================
-  ★ 안정 버전 (STABLE / 6.00) — 먹통(standalone) 버그 해결 + 별도 manifest.json
-    (start_url 절대경로) + 외부 아이콘 파일(icon-192/512.png) + PWA standalone
-    복귀 + 설정창 버전 표기(Ver.) + 먹통 추적용 디버그 계측 전부 제거. 정식 배포
-    상태. 이후 작업은 여기서 이어간다.
+  ★ 안정 버전 (STABLE / 6.02) — standalone 정식 배포본 위에 헤더 4종 토글
+    (업무·중요·개인·휴일) 추가 + 달 넘김(위로 드래그) 시 헤더·요일줄 흔들림
+    해결. 정식 배포 상태. 이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -248,6 +247,13 @@
              칩 순서도 업무·중요·휴일·개인 → 업무·중요·개인·휴일로 변경(헤더
              토글 순서와 통일). 업무·중요 아이콘은 22px로 키워 개인·휴일(20px)과
              시각 균형을 맞춤.
+  - Rev602 : 달력을 위로 드래그해 다음 달로 넘길 때 헤더(년월·토글·＋·설정)와
+             요일줄 등 위쪽 고정 영역이 통째로 흔들리던 문제 해결. 원인은 그리드
+             세로 드래그 도중 브라우저 기본 동작(스크롤·주소창 숨김 움찔)을 막지
+             않았던 것 — touchstart/touchend만 있고 touchmove가 없었음. 위로 끄는
+             방향만 시스템 스크롤과 엮여 흔들렸고 아래(이전 달)는 무사했던 이유.
+             그리드에 touchmove(passive:false) 추가, 세로 우세 드래그일 때만
+             preventDefault로 기본 동작을 차단. 달 넘김 로직·애니메이션은 그대로.
   ============================================
 -->
 <html lang="ko">
@@ -1028,7 +1034,7 @@
   <div class="set-row"><span id="evCount">일정 0개</span></div>
   <label>일정 검색</label>
   <div class="input-mic search-wrap">
-    <input type="text" id="searchInput" placeholder="제목·내용에서 검색 (예: tel)" autocomplete="off" enterkeyhint="search" />
+    <input type="text" id="searchInput" placeholder="제목·내용에서 검색 (예: tel)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" enterkeyhint="search" />
     <button type="button" class="mic-btn search-go" id="searchBtn" aria-label="검색"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <label>데이터 백업</label>
@@ -1042,7 +1048,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.601-test1</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.602-test (자동채우기 차단 시험)</div>
 </div>
 
 <!-- search result sheet -->
@@ -1077,7 +1083,7 @@
   </div>
   <label>제목</label>
   <div class="input-mic">
-    <input type="text" id="fTitle" placeholder="예: 납품 점검" />
+    <input type="text" id="fTitle" placeholder="예: 납품 점검" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" />
     <button type="button" class="mic-btn" id="micTitle" data-target="fTitle" aria-label="음성 입력"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
   </div>
   <div class="row2">
@@ -1086,7 +1092,7 @@
   </div>
   <label>메모 (선택)</label>
   <div class="input-mic">
-    <textarea id="fMemo" placeholder="세부 내용"></textarea>
+    <textarea id="fMemo" placeholder="세부 내용" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></textarea>
     <button type="button" class="mic-btn area" id="micMemo" data-target="fMemo" aria-label="음성 입력"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
   </div>
   <label>종류</label>
@@ -2035,8 +2041,10 @@ document.querySelectorAll('#types .type-chip').forEach(chip => {
     sy = e.touches[0].clientY;
   }, { passive: true });
 
-  // [흔들림 검증] 세로로 끄는 동안 브라우저 기본 동작(스크롤·주소창 움찔)을 막는다.
-  // 위로 드래그 시 헤더/요일줄이 흔들리는 원인 후보를 차단하는 실험.
+  // 세로로 끄는 동안 브라우저 기본 동작(스크롤·주소창 움찔)을 막는다.
+  // 이게 없으면 위로 드래그(다음 달)할 때 시스템이 스크롤/주소창 숨김을 시도해
+  // 헤더·요일줄 등 위쪽 고정 영역이 통째로 흔들렸음(이전 달은 그 방향이라 무사).
+  // 세로 우세 드래그일 때만 preventDefault 하여 흔들림을 차단한다.
   gridEl.addEventListener('touchmove', (e) => {
     if (!tracking || blocked()) return;
     const t = e.touches[0];
