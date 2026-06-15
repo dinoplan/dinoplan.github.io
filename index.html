@@ -2,11 +2,12 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.02  ·  파일명: Index_Rev602
+  Release Version 6.03  ·  파일명: Index_Rev603
   ============================================
-  ★ 안정 버전 (STABLE / 6.02) — standalone 정식 배포본 위에 헤더 4종 토글
+  ★ 안정 버전 (STABLE / 6.03) — standalone 정식 배포본 위에 헤더 4종 토글
     (업무·중요·개인·휴일) 추가 + 달 넘김(위로 드래그) 시 헤더·요일줄 흔들림
-    해결. 정식 배포 상태. 이후 작업은 여기서 이어간다.
+    해결 + 입력칸 자동채우기 줄(열쇠·카드·위치) 차단. 정식 배포 상태.
+    이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -254,6 +255,13 @@
              방향만 시스템 스크롤과 엮여 흔들렸고 아래(이전 달)는 무사했던 이유.
              그리드에 touchmove(passive:false) 추가, 세로 우세 드래그일 때만
              preventDefault로 기본 동작을 차단. 달 넘김 로직·애니메이션은 그대로.
+  - Rev603 : 입력칸(제목·메모·검색)을 누르면 키보드 위에 안드로이드 자동채우기
+             줄(열쇠=비밀번호·카드=신용카드·위치=주소)이 뜨던 문제 해결. 일정
+             앱엔 불필요한 줄이고 설정창 버튼까지 가렸음. 세 입력칸에 자동채우기
+             차단 신호(autocomplete=off, autocorrect=off, autocapitalize=off,
+             spellcheck=false, data-form-type=other, data-lpignore, data-1p-ignore)
+             를 부여 — 삼성 키보드에서 자동채우기 줄 사라짐 확인. ※ 키보드 자체의
+             글자 추천(예: '오라'→오라버니)은 키보드 기능이라 그대로 유지됨.
   ============================================
 -->
 <html lang="ko">
@@ -1048,7 +1056,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.602-test (자동채우기 차단 시험)</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.603</div>
 </div>
 
 <!-- search result sheet -->
