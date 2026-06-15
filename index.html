@@ -2,12 +2,12 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 4.00  ·  파일명: Index_Rev400
+  Release Version 6.00  ·  파일명: Index_Rev600
   ============================================
-  ★ 안정 버전 (STABLE / 4.00) — 캐릭터·아이콘 + 배포 형태(로그인 필수) + 인앱
-    브라우저 안내 + 종이(크림) 테마 + 검색 제목색 + 붉은색 통일 + 공휴일/휴일일정
-    토글(날짜색은 항상 유지) + manifest 색 통일 + PWA standalone 해제(바로가기 방식)
-    까지 확정 지점. 이후 작업은 여기서 이어간다.
+  ★ 안정 버전 (STABLE / 6.00) — 먹통(standalone) 버그 해결 + 별도 manifest.json
+    (start_url 절대경로) + 외부 아이콘 파일(icon-192/512.png) + PWA standalone
+    복귀 + 설정창 버전 표기(Ver.) + 먹통 추적용 디버그 계측 전부 제거. 정식 배포
+    상태. 이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -224,81 +224,27 @@
              ※ 근본 원인(standalone에서의 먹통)은 미규명 상태이며 이는 통로 차단용
              회피책임. 향후 standalone 복귀가 필요하면 display값을 "browser"→
              "standalone"으로 되돌리면 됨. 앱 본체 로직은 변경 없음.
+  - Rev500~ : [먹통 원인 규명 + 근본 해결] Rev400의 'standalone 해제'는 회피책일
+             뿐 근본 원인이 아니었음. 진짜 원인은 manifest가 index.html 안에 거대한
+             data-URI로 박혀 있고 start_url이 "."(상대경로)였던 것 — 홈 아이콘
+             전체화면(standalone) 실행 시 시작 위치를 못 잡아 검은 화면+먹통.
+             해결: (1) manifest를 별도 manifest.json 파일로 분리하고 start_url을
+             절대경로 "/index.html", scope "/"로 고정. (2) 아이콘을 data-URI 대신
+             외부 파일(icon-192.png·icon-512.png, 저장소 루트)로 분리. 화면 멈춤
+             지점을 추적하기 위한 디버그 계측(검은 STEP 패널)을 임시로 넣어 노트20
+             에서 STEP 0~6 정상 통과를 확인.
+  - Rev600 : [정식 배포 / 메이저 6.00] manifest display "browser"→"standalone"으로
+             복귀(이제 '앱 설치'로 뜸, 노트20에서 standalone? true·먹통 없음 확인).
+             설정창 오른쪽 하단에 버전 표기(Ver.) 추가 — 앞으로 현재 버전은 항상
+             여기서 갱신(캐시로 옛 버전이 떠 있는지 한눈에 구분). 먹통 추적용 디버그
+             계측(검은 STEP 패널·전역 에러 캐처·STEP 0~6·타임아웃)을 전부 제거.
+             앱 본체 로직은 변경 없음. ※ 별도 파일 manifest.json / icon-192.png /
+             icon-512.png / character.png 가 저장소 루트에 함께 있어야 동작.
   ============================================
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<!-- ===== Rev501 디버그 계측 (먹통 원인 추적용) =====
-     standalone(홈 아이콘 전체화면)에서 어디까지 살아서 도달했는지를
-     화면에 직접 찍는다. 콘솔을 볼 수 없는 환경이라, 화면에 보이는
-     STEP 숫자가 멈춘 지점 = 죽은 위치. 문제 해결 후 이 블록은 제거. -->
-<script>
-(function(){
-  // 화면 우상단에 항상 보이는 디버그 패널
-  var box = document.createElement('div');
-  box.id = '__dbg';
-  box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;'
-    + 'background:rgba(0,0,0,0.85);color:#0f0;font:12px/1.4 monospace;'
-    + 'padding:6px 8px;white-space:pre-wrap;word-break:break-all;'
-    + 'max-height:45vh;overflow:auto;pointer-events:auto;';
-  var t0 = Date.now();
-  function ts(){ return ((Date.now()-t0)/1000).toFixed(2)+'s'; }
-  function line(msg, color){
-    var d = document.createElement('div');
-    if(color) d.style.color = color;
-    d.textContent = '['+ts()+'] '+msg;
-    box.appendChild(d);
-  }
-  // body가 아직 없을 수 있으니 안전하게 붙인다
-  function attach(){
-    if(document.body){ document.body.appendChild(box); }
-    else { (document.documentElement||document.head).appendChild(box); }
-  }
-  if(document.body){ attach(); }
-  else { document.addEventListener('DOMContentLoaded', attach); attach(); }
-
-  // 전역 API: 각 단계에서 window.DBG.step(n,'설명') 호출
-  window.DBG = {
-    step: function(n, desc){ line('STEP '+n+(desc?' — '+desc:''), '#0f0'); },
-    note: function(msg){ line(msg, '#9cf'); },
-    err:  function(msg){ line('ERROR ▶ '+msg, '#f55'); }
-  };
-
-  // 전역 에러 캐처 — 조용한 죽음 대신 화면에 빨갛게 표시
-  window.onerror = function(message, source, lineno, colno, error){
-    var s = (source||'').split('/').pop();
-    window.DBG.err(message + '  @'+s+':'+lineno+':'+colno
-      + (error && error.stack ? '\n'+error.stack : ''));
-    return false; // 기본 동작도 유지
-  };
-  window.addEventListener('unhandledrejection', function(e){
-    var r = e && e.reason;
-    window.DBG.err('unhandledrejection: '
-      + (r && r.message ? r.message : String(r))
-      + (r && r.stack ? '\n'+r.stack : ''));
-  });
-
-  // 환경 정보 한 줄 (standalone 여부 / UA)
-  var standalone = (window.navigator.standalone === true)
-    || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  window.DBG.note('display-mode standalone? ' + standalone);
-  window.DBG.note('UA: ' + navigator.userAgent);
-
-  // STEP 0 — HTML 파싱 시작 (가장 먼저 실행되는 스크립트)
-  window.DBG.step(0, 'HTML 파싱 시작 (head 최상단)');
-
-  // 타임아웃 안전망 — N초 안에 STEP 6(인증 확정)에 도달 못하면 경고
-  window.__reachedStep6 = false;
-  setTimeout(function(){
-    if(!window.__reachedStep6){
-      window.DBG.err('TIMEOUT: 8초 안에 STEP 6(인증 확정)에 도달하지 못함. '
-        + '위에 찍힌 마지막 STEP 번호가 멈춘 지점입니다.');
-    }
-  }, 8000);
-})();
-</script>
-<!-- ===== /Rev501 디버그 계측 ===== -->
 <!-- 캐시 방지: 코드 갱신 시 옛 버전이 남지 않도록 매번 최신 확인 -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -837,7 +783,6 @@
        window.cloudListen()            : 현재 사용자 칸 실시간 수신 시작
        window.onCloudData(events)      : 수신 콜백 (본문이 구현)
 -->
-<script>if(window.DBG) window.DBG.step(1, 'module 태그 도달 (파서가 Firebase 블록까지 옴)');</script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import {
@@ -859,7 +804,6 @@
   const app  = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db   = getFirestore(app);
-  if(window.DBG) window.DBG.step(2, 'Firebase import + initializeApp 완료');
 
   /* ---- 2) 인증 층 ----
      현재 로그인한 사용자를 한 곳(currentUser)에서만 관리한다.
@@ -971,7 +915,6 @@
 
   // 본문이 "연결 준비됨"을 기다릴 수 있게 신호
   window.cloudReady = true;
-  if(window.DBG) window.DBG.step(3, 'Firebase 모듈 끝 (cloudReady=true)');
   document.dispatchEvent(new Event('cloud-ready'));
 </script>
 <!-- ===== /Firebase ===== -->
@@ -1070,6 +1013,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.600</div>
 </div>
 
 <!-- search result sheet -->
@@ -1147,7 +1091,6 @@
 </div>
 
 <script>
-if(window.DBG) window.DBG.step(4, '본문 인라인 스크립트 진입');
 const STORE = 'workcal.events.v1';
 const MS = 86400000;
 let events = load();
@@ -2233,7 +2176,6 @@ $('closeSearch').onclick = () => {
 $('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
 
 render();
-if(window.DBG) window.DBG.step(5, '첫 render() 완료');
 // after first paint, cell height is known — re-render once so lane count is accurate
 requestAnimationFrame(() => requestAnimationFrame(render));
 
@@ -2288,8 +2230,6 @@ function showCalendar() {
 // 로그인 상태가 바뀔 때마다 호출됨 (Firebase 인증 층 → 본문)
 let _cloudStarted = false;
 window.onAuthChange = async function(user) {
-  window.__reachedStep6 = true;
-  if(window.DBG) window.DBG.step(6, '인증 상태 확정 (로그인=' + (user?'O':'X') + ')');
   if (user) {
     showCalendar();
     if ($('accountEmail')) $('accountEmail').textContent = user.email || user.displayName || '로그인됨';
