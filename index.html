@@ -240,6 +240,14 @@
              계측(검은 STEP 패널·전역 에러 캐처·STEP 0~6·타임아웃)을 전부 제거.
              앱 본체 로직은 변경 없음. ※ 별도 파일 manifest.json / icon-192.png /
              icon-512.png / character.png 가 저장소 루트에 함께 있어야 동작.
+  - Rev601 : 헤더 표시 토글을 4종류로 확장. 기존 개인·휴일 2개에 더해 업무
+             (클립보드 아이콘)·중요(깃발 아이콘) 토글 추가. 헤더 순서는
+             업무·중요·개인·휴일·＋·설정. 업무=먹색·중요=파랑으로 켜짐 표시,
+             끄면 다른 토글과 동일하게 흐림+빗금. isVisibleType()에 showWork·
+             showImportant 분기 추가(각각 기기에 저장돼 유지). 새 일정 '종류'
+             칩 순서도 업무·중요·휴일·개인 → 업무·중요·개인·휴일로 변경(헤더
+             토글 순서와 통일). 업무·중요 아이콘은 22px로 키워 개인·휴일(20px)과
+             시각 균형을 맞춤.
   ============================================
 -->
 <html lang="ko">
@@ -323,6 +331,21 @@
     display: flex; align-items: center; justify-content: center;
   }
   .head-btn:active { background: var(--surface); }
+  /* 업무일정 토글: 켜짐=먹색, 꺼짐=흐림+빗금 */
+  .head-btn#workToggle { color: var(--text); }
+  .head-btn#workToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#workToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  /* 중요일정 토글: 켜짐=파랑, 꺼짐=흐림+빗금 */
+  .head-btn#importantToggle { color: #2563a8; }
+  .head-btn#importantToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#importantToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  @media (prefers-color-scheme: dark) { .head-btn#importantToggle { color: #7fb3ed; } }
   /* 개인일정 숨김(off) 상태: 토글 버튼을 흐리게 + 빗금 느낌으로 표시 */
   .head-btn#personalToggle { color: #1d9e75; }
   .head-btn#personalToggle.off { color: var(--text-3); position: relative; }
@@ -960,6 +983,12 @@
       <span id="ymLabel"></span><span class="caret">▾</span>
     </button>
     <div class="head-actions">
+      <button class="head-btn" id="workToggle" aria-label="업무일정 표시 전환" title="업무일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      </button>
+      <button class="head-btn" id="importantToggle" aria-label="중요일정 표시 전환" title="중요일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+      </button>
       <button class="head-btn" id="personalToggle" aria-label="개인일정 표시 전환" title="개인일정 표시/숨김">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
@@ -1013,7 +1042,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.600</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.601</div>
 </div>
 
 <!-- search result sheet -->
@@ -1064,8 +1093,8 @@
   <div class="types" id="types">
     <button type="button" class="type-chip sel" data-t="work">업무</button>
     <button type="button" class="type-chip" data-t="important">중요일정</button>
-    <button type="button" class="type-chip" data-t="holiday">휴일일정</button>
     <button type="button" class="type-chip" data-t="personal">개인일정</button>
+    <button type="button" class="type-chip" data-t="holiday">휴일일정</button>
   </div>
   <div class="colors-hint" id="weekendHint">주말에는 업무 일정을 설정할 수 없습니다</div>
   <label>배경색</label>
@@ -1102,10 +1131,14 @@ let lastSelectedDate = null;
 let lastSearchQuery = '';   // 마지막 검색어 (뒤로가기로 목록 복원용)
 let cameFromSearch = false; // 수정 화면이 검색을 거쳐 열렸는지
 let _navActive = false;     // 검색 목록이 history에 한 단계 쌓여 있는지
+let showWork = (localStorage.getItem('workcal.showWork') !== 'off');         // 업무일정 달력 표시 여부(기본 표시)
+let showImportant = (localStorage.getItem('workcal.showImportant') !== 'off'); // 중요일정 달력 표시 여부(기본 표시)
 let showPersonal = (localStorage.getItem('workcal.showPersonal') !== 'off'); // 개인일정 달력 표시 여부(기본 표시)
 let showHoliday = (localStorage.getItem('workcal.showHoliday') !== 'off');   // 공휴일+휴일일정 표시 여부(기본 표시)
-// 달력에 이 일정을 표시할지 — 개인일정/휴일일정 토글을 함께 반영
+// 달력에 이 일정을 표시할지 — 업무/중요/개인/휴일일정 토글을 함께 반영
 function isVisibleType(e) {
+  if (!showWork && (e.type === 'work' || !e.type)) return false;
+  if (!showImportant && e.type === 'important') return false;
   if (!showPersonal && e.type === 'personal') return false;
   if (!showHoliday && e.type === 'holiday') return false;
   return true;
@@ -1787,6 +1820,30 @@ $('pickerScrim').onclick = closePicker;
 $('backToSearch').onclick = backToSearchList;
 $('addBtn').onclick = () => { lastSelectedDate = lastSelectedDate || new Date(); openEdit(null); };
 $('addOnDay').onclick = () => openEdit(null);
+// 업무일정 표시/숨김 토글
+function syncWorkToggle() {
+  $('workToggle').classList.toggle('off', !showWork);
+}
+$('workToggle').onclick = () => {
+  showWork = !showWork;
+  localStorage.setItem('workcal.showWork', showWork ? 'on' : 'off');
+  syncWorkToggle();
+  render();
+  showToast(showWork ? '업무일정을 표시합니다' : '업무일정을 숨깁니다 (날짜를 누르면 보입니다)');
+};
+syncWorkToggle();
+// 중요일정 표시/숨김 토글
+function syncImportantToggle() {
+  $('importantToggle').classList.toggle('off', !showImportant);
+}
+$('importantToggle').onclick = () => {
+  showImportant = !showImportant;
+  localStorage.setItem('workcal.showImportant', showImportant ? 'on' : 'off');
+  syncImportantToggle();
+  render();
+  showToast(showImportant ? '중요일정을 표시합니다' : '중요일정을 숨깁니다 (날짜를 누르면 보입니다)');
+};
+syncImportantToggle();
 // 개인일정 표시/숨김 토글
 function syncPersonalToggle() {
   $('personalToggle').classList.toggle('off', !showPersonal);
