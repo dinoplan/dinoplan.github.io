@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.08  ·  파일명: Index_Rev608
+  Release Version 6.09  ·  파일명: Index_Rev609
   ============================================
   ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
     자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
@@ -313,6 +313,10 @@
              popstate(폰 뒤로가기) 경로도 중복 코드를 closeMemo() 호출로 통일.
              또한 메모장이 열려 있는 동안에는 onCloudMemoData가 본문/이력을 덮어쓰지
              않도록 가드(편집 중 보호). import 복원도 본문+이력 1회 push로 정리.
+  - Rev609 : [PC용 메모 버튼] PC(넓은 화면 ≥600px)에선 왼쪽 드래그가 어려워 메모장
+             진입로가 없던 문제. 헤더 설정 버튼 옆에 메모장 버튼 추가. 단 폰(좁은
+             화면)에선 숨겨 헤더가 빽빽해지지 않게 하고(폰은 종전대로 왼쪽 드래그로
+             진입), PC에서만 display:flex로 표시. 클릭 시 openMemo() 호출.
   ============================================
 -->
 <html lang="ko">
@@ -396,6 +400,9 @@
     display: flex; align-items: center; justify-content: center;
   }
   .head-btn:active { background: var(--surface); }
+  /* 메모 버튼은 PC(넓은 화면)에서만 — 폰은 왼쪽 드래그로 진입 */
+  .head-btn#memoBtn { display: none; }
+  @media (min-width: 600px) { .head-btn#memoBtn { display: flex; } }
   /* 업무일정 토글: 켜짐=먹색, 꺼짐=흐림+빗금 */
   .head-btn#workToggle { color: var(--text); }
   .head-btn#workToggle.off { color: var(--text-3); position: relative; }
@@ -1178,7 +1185,9 @@
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
       <button class="head-btn" id="settingsBtn" aria-label="설정"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-    </div>
+      <button class="head-btn" id="memoBtn" aria-label="메모장" title="메모장">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+      </button>
   </header>
   <div class="dow">
     <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="we"><span class="wsat">토</span><span class="wslash"> / </span><span class="wsun">일</span><span class="corner" id="cornerDates"></span></span>
@@ -1247,7 +1256,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.608</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.609</div>
 </div>
 
 <!-- search result sheet -->
@@ -2574,6 +2583,7 @@ function showSearchResults(q) {
   pushNav();
 }
 $('settingsBtn').onclick = openSettings;
+$('memoBtn').onclick = openMemo;
 $('exportBtn').onclick = exportBackup;
 $('importBtn').onclick = () => $('importFile').click();
 $('importFile').onchange = (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
