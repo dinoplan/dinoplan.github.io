@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.05  ·  파일명: Index_Rev605
+  Release Version 6.07  ·  파일명: Index_Rev607
   ============================================
   ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
     자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
@@ -289,6 +289,22 @@
              상단 바 3요소('‹ 달력'·가운데 날짜·History 아이콘)의 색을 달력 헤더
              아이콘과 동일한 --text-2로 통일(이전엔 '달력'만 진해 톤이 어긋났음).
              라이트/다크 모드 모두 테마 변수로 자동 대응.
+  - Rev606 : [메모 클라우드 동기화 추가 / B방식] To-Do 메모장 본문(memo)과 수정
+             이력(memoHist)을 Firebase에 동기화해 PC-폰에서 함께 보도록 함.
+             일정 동기화(events)에 영향이 없도록 같은 사용자 문서에 '별도 필드'로
+             merge 저장 — 일정 로직(cloudSave/cloudListen/onCloudData)은 손대지
+             않음. 신규 함수 cloudSaveMemo/cloudListenMemo/onCloudMemoData로 독립
+             처리하고, 메아리 방지(_lastPushedMemoJson)·로그아웃 시 구독 해제도
+             일정과 분리. saveMemoBody/saveMemoHistory에 클라우드 push만 얹어
+             로컬 저장 동작은 종전 그대로 유지. 수신 시 메모장/이력창이 열려
+             있으면 화면도 갱신(입력 중 textarea는 값 덮어쓰지 않음).
+  - Rev607 : [백업에 메모 포함] 설정의 내보내기/가져오기(.json)에 메모 본문(memo)과
+             이력(memoHist)을 함께 담도록 확장. 백업 형식 version 1→2. 내보내기는
+             {events, memo, memoHist} 저장. 가져오기는 메모 필드가 있는 백업(v2+)일
+             때만 메모도 복원하고, 메모 없는 구버전(v1) 백업은 기존처럼 일정만
+             복원해 호환 유지. 복원 시 클라우드에도 반영(saveMemoBody/saveMemoHistory)
+             되고, 메모장/이력창이 열려 있으면 화면도 갱신(입력 중 textarea 제외).
+             확인 문구·완료 안내·토스트를 메모 포함 여부에 맞춰 표시.
   ============================================
 -->
 <html lang="ko">
@@ -914,6 +930,10 @@
        window.cloudSave(events)        : 현재 사용자 칸에 저장
        window.cloudListen()            : 현재 사용자 칸 실시간 수신 시작
        window.onCloudData(events)      : 수신 콜백 (본문이 구현)
+     메모 동기화 (Rev606, 일정과 독립된 별도 필드)
+       window.cloudSaveMemo(memo, memoHist) : 메모 본문·이력 저장 (events 보존, merge)
+       window.cloudListenMemo()             : 메모 실시간 수신 시작
+       window.onCloudMemoData(memo, hist)   : 메모 수신 콜백 (본문이 구현)
 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
@@ -1013,6 +1033,48 @@
   // 실시간 수신 중단 (로그아웃 시 본문에서 호출)
   window.cloudStop = function() {
     if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+    if (_unsubMemo) { _unsubMemo(); _unsubMemo = null; }
+  };
+
+  /* ---- 3-b) 메모 동기화 (Rev606, B방식: 일정과 독립) ----
+     일정(events)과 같은 사용자 문서(calendars/{uid})에 '나란히' 별도 필드로
+     저장한다. 일정 로직(cloudSave/cloudListen/onCloudData)은 전혀 건드리지 않고,
+     메모 본문(memo)·이력(memoHist)만 따로 읽고 쓴다. merge:true로 저장하므로
+     events 필드는 보존된다. 어느 한쪽이 깨져도 다른 쪽에 영향 없음. */
+  let _lastPushedMemoJson = null;   // 메아리 방지(메모 전용)
+  let _unsubMemo = null;            // 메모 구독 해제 함수
+
+  // 메모 본문/이력을 내 칸에 저장 (events는 손대지 않음 — merge)
+  window.cloudSaveMemo = async function(memo, memoHist) {
+    if (!currentUser) return;
+    try {
+      const payload = { memo, memoHist, memoAt: Date.now() };
+      _lastPushedMemoJson = JSON.stringify({ memo, memoHist });
+      await setDoc(userDocRef(currentUser.uid), payload, { merge: true });
+    } catch (e) {
+      console.warn('cloudSaveMemo 실패:', e);
+    }
+  };
+
+  // 내 칸의 메모 변화를 실시간 수신 (events 구독과 별개)
+  window.cloudListenMemo = function() {
+    if (!currentUser) return;
+    if (_unsubMemo) { _unsubMemo(); _unsubMemo = null; }
+    _unsubMemo = onSnapshot(userDocRef(currentUser.uid), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      // 메모 필드가 아직 없는 사용자는 무시(기존 일정만 있는 문서 대비)
+      if (typeof data.memo === 'undefined' && typeof data.memoHist === 'undefined') return;
+      const memo = typeof data.memo === 'string' ? data.memo : '';
+      const memoHist = Array.isArray(data.memoHist) ? data.memoHist : [];
+      // 방금 내가 올린 것이 메아리쳐 온 경우 무시
+      if (JSON.stringify({ memo, memoHist }) === _lastPushedMemoJson) return;
+      if (typeof window.onCloudMemoData === 'function') {
+        window.onCloudMemoData(memo, memoHist);
+      }
+    }, (err) => {
+      console.warn('cloudListenMemo 오류:', err);
+    });
   };
 
   /* ---- 데이터 '이사' (2.x → 3.0 1회 전환) ----
@@ -1177,7 +1239,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.605</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.607</div>
 </div>
 
 <!-- search result sheet -->
@@ -1314,9 +1376,16 @@ function loadMemo() {
 }
 function saveMemoBody() {
   try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+  // 클라우드에도 올리기 — 폰 저장은 그대로 두고 추가만 (일정과 독립)
+  if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+    window.cloudSaveMemo(memoText, memoHistory);
+  }
 }
 function saveMemoHistory() {
   try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {}
+  if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+    window.cloudSaveMemo(memoText, memoHistory);
+  }
 }
 // 'YYYY.MM.DD HH:MM' 표시
 function fmtWhen(ts) {
@@ -2363,7 +2432,7 @@ function openSettings() {
   showSheet('settingsSheet');
 }
 function exportBackup() {
-  const data = JSON.stringify({ app: 'workcal', version: 1, exportedAt: Date.now(), events }, null, 2);
+  const data = JSON.stringify({ app: 'workcal', version: 2, exportedAt: Date.now(), events, memo: memoText, memoHist: memoHistory }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2373,7 +2442,7 @@ function exportBackup() {
   a.download = '캘린더백업_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.json';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast('캘린더 내보내기 완료되었습니다');
+  showToast('일정·메모 내보내기 완료되었습니다');
 }
 function importBackup(file) {
   const reader = new FileReader();
@@ -2382,13 +2451,31 @@ function importBackup(file) {
       const parsed = JSON.parse(reader.result);
       const list = Array.isArray(parsed) ? parsed : parsed.events;
       if (!Array.isArray(list)) throw new Error('형식 오류');
-      if (!confirm('가져오면 현재 일정이 이 백업으로 바뀝니다. 진행할까요?')) return;
+      // 메모 포함 여부 (version 2+ 백업에만 존재 — 구버전 호환)
+      const hasMemo = !Array.isArray(parsed) &&
+        (typeof parsed.memo === 'string' || Array.isArray(parsed.memoHist));
+      const msg = hasMemo
+        ? '가져오면 현재 일정과 메모가 이 백업으로 바뀝니다. 진행할까요?'
+        : '가져오면 현재 일정이 이 백업으로 바뀝니다. 진행할까요?';
+      if (!confirm(msg)) return;
       events = list;
       save();
       render();
+      // 메모도 백업에 있으면 함께 복원 (없으면 기존 메모 그대로 둠)
+      if (hasMemo) {
+        memoText = typeof parsed.memo === 'string' ? parsed.memo : '';
+        memoHistory = Array.isArray(parsed.memoHist) ? parsed.memoHist : [];
+        saveMemoBody();
+        saveMemoHistory();
+        const ta = $('memoText');
+        if (ta && document.activeElement !== ta) ta.value = memoText;
+        if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
+      }
       $('evCount').textContent = '일정 ' + events.length + '개';
-      $('backupInfo').textContent = '가져오기 완료: ' + events.length + '개 일정을 복원했습니다.';
-      showToast('캘린더 가져오기 완료되었습니다');
+      $('backupInfo').textContent = hasMemo
+        ? '가져오기 완료: 일정 ' + events.length + '개 + 메모를 복원했습니다.'
+        : '가져오기 완료: ' + events.length + '개 일정을 복원했습니다.';
+      showToast(hasMemo ? '일정·메모 가져오기 완료되었습니다' : '캘린더 가져오기 완료되었습니다');
     } catch(e) {
       $('backupInfo').textContent = '가져오기 실패: 올바른 백업 파일이 아닙니다.';
       showToast('가져오기 실패: 올바른 파일이 아닙니다');
@@ -2545,6 +2632,24 @@ window.onCloudData = function(incoming) {
   render();
 };
 
+// 클라우드에서 메모(본문/이력)가 도착하면 화면/로컬 갱신 (일정과 독립)
+window.onCloudMemoData = function(memo, memoHist) {
+  memoText = (typeof memo === 'string') ? memo : '';
+  memoHistory = Array.isArray(memoHist) ? memoHist : [];
+  try {
+    localStorage.setItem(MEMO_KEY, memoText);
+    localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory));
+  } catch(e) {}
+  // 메모장이 열려 있으면 textarea도 최신으로 반영 (커서/포커스 깨지지 않게 값만 교체)
+  const panelOpen = $('memoPanel') && $('memoPanel').classList.contains('open');
+  if (panelOpen) {
+    const ta = $('memoText');
+    if (ta && document.activeElement !== ta) ta.value = memoText;
+  }
+  // 이력창이 열려 있으면 목록 다시 그림
+  if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
+};
+
 // Firebase 모듈이 준비된 뒤 콜백 실행 (이미 준비됐으면 즉시)
 function whenCloudReady(fn) {
   if (window.cloudReady) { fn(); }
@@ -2591,6 +2696,8 @@ window.onAuthChange = async function(user) {
       }
       // 2) 내 칸 실시간 동기화 시작
       if (typeof window.cloudListen === 'function') window.cloudListen();
+      // 2-b) 메모 실시간 동기화 시작 (일정과 독립)
+      if (typeof window.cloudListenMemo === 'function') window.cloudListenMemo();
     }
   } else {
     // 로그아웃 상태
