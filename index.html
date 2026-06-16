@@ -2,11 +2,11 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.04  ·  파일명: Index_Rev604
+  Release Version 6.05  ·  파일명: Index_Rev605
   ============================================
-  ★ 안정 버전 (STABLE / 6.04) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
+  ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
     자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
-    & 수정 이력(날짜·시:분). 메모는 현재 로컬 저장. 이후 작업은 여기서 이어간다.
+    & 수정 이력(카드형, 날짜·시:분). 메모는 현재 로컬 저장. 이후 작업은 여기서 이어간다.
   ============================================
   [버전 이력]
   - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
@@ -284,6 +284,11 @@
                (열쇠·카드)은 원래 안 뜸. 키보드 높이(--kb)만큼 아래 여백 확보.
              · 상단 바가 상태바에 가리던 문제 수정(safe-area-inset-top이 0인 기기
                대비 최소 28px 상단 여백 보장).
+  - Rev605 : 메모 수정 이력 화면을 검색 결과와 동일한 카드 형태로 변경(항목마다
+             배경 surface + 둥근 모서리 + 10px 간격, 기존 밑줄 구분 대체). 메모장
+             상단 바 3요소('‹ 달력'·가운데 날짜·History 아이콘)의 색을 달력 헤더
+             아이콘과 동일한 --text-2로 통일(이전엔 '달력'만 진해 톤이 어긋났음).
+             라이트/다크 모드 모두 테마 변수로 자동 대응.
   ============================================
 -->
 <html lang="ko">
@@ -625,7 +630,7 @@
   }
   .memo-bar-btn {
     display: flex; align-items: center; gap: 4px;
-    background: none; border: none; color: var(--text);
+    background: none; border: none; color: var(--text-2);
     font-size: 15px; font-weight: 600; padding: 6px 8px; cursor: pointer;
     border-radius: 8px;
   }
@@ -663,12 +668,13 @@
   .mh-head h2 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text); }
   .mh-list {
     flex: 1; overflow-y: auto; padding: 4px 18px 8px;
+    display: flex; flex-direction: column; gap: 10px;
     overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
   .mh-item {
-    padding: 12px 0; border-bottom: 1px solid var(--surface);
+    padding: 12px 14px; background: var(--surface); border-radius: 10px;
   }
-  .mh-when { font-size: 12px; color: var(--text-3); margin-bottom: 5px; }
+  .mh-when { font-size: 12px; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
   .mh-body { font-size: 14px; line-height: 1.55; color: var(--text); white-space: pre-wrap; word-break: break-word; }
   .mh-empty { color: var(--text-3); text-align: center; padding: 40px 0; }
   .mh-foot { padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); }
@@ -1171,7 +1177,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.604</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.605</div>
 </div>
 
 <!-- search result sheet -->
