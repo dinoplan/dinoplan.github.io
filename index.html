@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.07  ·  파일명: Index_Rev607
+  Release Version 6.08  ·  파일명: Index_Rev608
   ============================================
   ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
     자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
@@ -305,6 +305,14 @@
              복원해 호환 유지. 복원 시 클라우드에도 반영(saveMemoBody/saveMemoHistory)
              되고, 메모장/이력창이 열려 있으면 화면도 갱신(입력 중 textarea 제외).
              확인 문구·완료 안내·토스트를 메모 포함 여부에 맞춰 표시.
+  - Rev608 : [메모 이력 안 쌓이던 버그 수정] 메모를 적고 나가면(닫기/뒤로/달력) 즉시
+             수정 이력이 남도록 closeMemo를 정리. 원인은 Rev606 동기화에서 닫을 때
+             본문을 먼저 push → 그 메아리(onCloudMemoData)가 방금 쌓은 이력을 옛
+             값으로 덮어쓰던 것. 이제 닫을 때 (1)변경 판정 → (2)이력 먼저 쌓기 →
+             (3)로컬 저장 → (4)본문+이력을 클라우드에 '한 번에' push 순서로 처리.
+             popstate(폰 뒤로가기) 경로도 중복 코드를 closeMemo() 호출로 통일.
+             또한 메모장이 열려 있는 동안에는 onCloudMemoData가 본문/이력을 덮어쓰지
+             않도록 가드(편집 중 보호). import 복원도 본문+이력 1회 push로 정리.
   ============================================
 -->
 <html lang="ko">
@@ -1239,7 +1247,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.607</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.608</div>
 </div>
 
 <!-- search result sheet -->
@@ -1408,16 +1416,22 @@ function openMemo() {
 function closeMemo() {
   const ta = $('memoText');
   const now = ta.value;
-  // 본문 저장
+  // 변경 여부를 먼저 판정 (저장/푸시 이전에)
+  const changed = (now !== _memoOpenSnapshot);
   memoText = now;
-  saveMemoBody();
-  // 열었을 때와 내용이 다르면 이력에 스냅샷 1개 추가(날짜+시:분)
-  if (now !== _memoOpenSnapshot) {
+  // 변경됐으면 이력 스냅샷 1개를 먼저 쌓고
+  if (changed) {
     memoHistory.unshift({ at: Date.now(), text: now });
-    // 이력이 무한정 쌓이지 않게 상한(최근 500개)
     if (memoHistory.length > 500) memoHistory.length = 500;
-    saveMemoHistory();
   }
+  // 로컬 저장 (본문·이력)
+  try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+  if (changed) { try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {} }
+  // 클라우드에는 본문+이력을 '함께' 한 번만 올린다 (메아리가 이력을 지우지 않도록)
+  if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+    window.cloudSaveMemo(memoText, memoHistory);
+  }
+  _memoOpenSnapshot = now;   // 닫은 뒤 스냅샷 동기화
   $('memoPanel').classList.remove('open');
   // 키보드 내려가도록 포커스 해제
   ta.blur();
@@ -2465,8 +2479,14 @@ function importBackup(file) {
       if (hasMemo) {
         memoText = typeof parsed.memo === 'string' ? parsed.memo : '';
         memoHistory = Array.isArray(parsed.memoHist) ? parsed.memoHist : [];
-        saveMemoBody();
-        saveMemoHistory();
+        try {
+          localStorage.setItem(MEMO_KEY, memoText);
+          localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory));
+        } catch(e) {}
+        // 클라우드엔 본문+이력 한 번에
+        if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+          window.cloudSaveMemo(memoText, memoHistory);
+        }
         const ta = $('memoText');
         if (ta && document.activeElement !== ta) ta.value = memoText;
         if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
@@ -2634,18 +2654,16 @@ window.onCloudData = function(incoming) {
 
 // 클라우드에서 메모(본문/이력)가 도착하면 화면/로컬 갱신 (일정과 독립)
 window.onCloudMemoData = function(memo, memoHist) {
+  const panelOpen = $('memoPanel') && $('memoPanel').classList.contains('open');
+  // 메모장을 편집 중일 때는 들어오는 값으로 덮어쓰지 않는다.
+  // (작성 중 본문이 바뀌거나, 닫을 때 쌓은 이력이 지워지는 것을 방지)
+  if (panelOpen) return;
   memoText = (typeof memo === 'string') ? memo : '';
   memoHistory = Array.isArray(memoHist) ? memoHist : [];
   try {
     localStorage.setItem(MEMO_KEY, memoText);
     localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory));
   } catch(e) {}
-  // 메모장이 열려 있으면 textarea도 최신으로 반영 (커서/포커스 깨지지 않게 값만 교체)
-  const panelOpen = $('memoPanel') && $('memoPanel').classList.contains('open');
-  if (panelOpen) {
-    const ta = $('memoText');
-    if (ta && document.activeElement !== ta) ta.value = memoText;
-  }
   // 이력창이 열려 있으면 목록 다시 그림
   if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
 };
@@ -2804,18 +2822,8 @@ window.addEventListener('popstate', () => {
   }
   // 메모장이 열려 있으면 → 닫기(내용 저장·이력 반영)
   if ($('memoPanel').classList.contains('open')) {
-    _navActive = false;
-    // closeMemo가 history.back을 또 부르지 않도록 _navActive를 먼저 끈 상태로 처리
-    const ta = $('memoText');
-    memoText = ta.value; saveMemoBody();
-    if (memoText !== _memoOpenSnapshot) {
-      memoHistory.unshift({ at: Date.now(), text: memoText });
-      if (memoHistory.length > 500) memoHistory.length = 500;
-      saveMemoHistory();
-    }
-    $('memoPanel').classList.remove('open');
-    ta.blur();
-    if (!document.querySelector('.sheet.open, .picker.open')) unlockBack();
+    _navActive = false;   // closeMemo가 history.back을 또 부르지 않도록 먼저 끔
+    closeMemo();
     return;
   }
   // 검색을 거쳐 들어온 수정 화면이 열려 있으면 → 검색 목록으로 복귀
