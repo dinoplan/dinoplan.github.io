@@ -277,10 +277,13 @@
              현재 로컬(localStorage)만 — 클라우드 동기화는 다음 버전에서 별도 칸으로
              추가 예정(일정 동기화에 영향 없도록). 일정/검색/달 넘김 로직은 불변.
              · 메모장 상단 바 가운데에 오늘 날짜·요일 표시(예: 6월 16일 (화)).
-             · 메모장에서 오른쪽 드래그(텍스트 칸 바깥에서 시작) 시 달력으로 복귀.
-               텍스트 칸 안에서 시작한 드래그는 편집으로 보고 무시.
+             · 메모장에서 오른쪽 드래그 시 달력으로 복귀. 가로 우세 드래그면
+               텍스트 칸 안에서 시작해도 허용(메모는 가로 스크롤이 없어 편집과
+               충돌 없음). 세로 드래그는 textarea 스크롤로 유지.
              · 상단 바 탭(버튼 외 영역)으로 키보드 내림. textarea라 자동채우기 줄
                (열쇠·카드)은 원래 안 뜸. 키보드 높이(--kb)만큼 아래 여백 확보.
+             · 상단 바가 상태바에 가리던 문제 수정(safe-area-inset-top이 0인 기기
+               대비 최소 28px 상단 여백 보장).
   ============================================
 -->
 <html lang="ko">
@@ -608,7 +611,9 @@
     position: fixed; inset: 0; z-index: 30;
     background: var(--bg);
     display: flex; flex-direction: column;
-    padding-top: env(safe-area-inset-top);
+    /* 상태바(시계·배터리)에 상단 바가 가리지 않도록 여유 확보.
+       일부 기기에서 safe-area-inset-top이 0으로 잡혀도 최소 여백을 보장한다. */
+    padding-top: max(env(safe-area-inset-top), 28px);
     padding-bottom: env(safe-area-inset-bottom);
     transform: translateX(100%);
     transition: transform .26s cubic-bezier(.2,.8,.2,1);
@@ -2464,17 +2469,16 @@ $('searchBtn').onclick = runSearch;
 $('memoBack').onclick = closeMemo;
 $('memoHistoryBtn').onclick = openMemoHistory;
 $('memoHistoryClose').onclick = closeMemoHistory;
-// 메모장에서 오른쪽으로 드래그하면 달력으로 닫기 + 상단바/여백 탭하면 키보드 내림
+// 메모장에서 오른쪽으로 드래그하면 달력으로 닫기 + 상단바 탭하면 키보드 내림
 (function(){
   const panel = $('memoPanel');
   const ta = $('memoText');
   const bar = panel.querySelector('.memo-bar');
-  const SWIPE = 60;   // 달력 복귀로 인정할 가로 드래그 최소 거리(px)
-  let mx = 0, my = 0, mt = false, fromTextarea = false;
+  const SWIPE = 70;   // 달력 복귀로 인정할 가로 드래그 최소 거리(px)
+  let mx = 0, my = 0, mt = false;
   panel.addEventListener('touchstart', (e) => {
     mt = true;
     mx = e.touches[0].clientX; my = e.touches[0].clientY;
-    fromTextarea = (e.target === ta);   // 글 쓰는 칸에서 시작한 드래그인지
   }, { passive: true });
   panel.addEventListener('touchend', (e) => {
     if (!mt) return; mt = false;
@@ -2485,18 +2489,19 @@ $('memoHistoryClose').onclick = closeMemoHistory;
     const moved = Math.abs(dx) + Math.abs(dy);
     // 거의 안 움직였으면(=탭) : 상단 바를 탭한 경우 키보드 내림
     if (moved < 10) {
-      if (bar.contains(e.target)) { ta.blur(); }
+      if (bar.contains(e.target)) ta.blur();
       return;
     }
-    // 오른쪽으로 충분히 끈 가로 드래그 → 달력 복귀
-    // (단, 글 쓰는 칸 안에서 시작한 드래그는 텍스트 조작일 수 있어 무시)
-    if (!fromTextarea && dx > SWIPE && Math.abs(dx) > Math.abs(dy)) {
+    // 오른쪽으로 충분히 끈 가로 드래그 → 달력 복귀.
+    // textarea 안에서 시작해도 허용한다(메모는 가로 스크롤이 없어 편집과 충돌 없음).
+    // 세로 우세 드래그는 그대로 두어 textarea 스크롤/커서 이동에 맡긴다.
+    if (dx > SWIPE && Math.abs(dx) > Math.abs(dy) * 1.5) {
       closeMemo();
     }
   }, { passive: true });
   // 상단 바를 누르면(클릭) 키보드 내림 — 버튼 외 영역
   bar.addEventListener('click', (e) => {
-    if (e.target.closest('button')) return; // 달력/이력 버튼은 각자 동작
+    if (e.target.closest('button')) return;
     ta.blur();
   });
 })();
