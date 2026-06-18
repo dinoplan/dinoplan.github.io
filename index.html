@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.11  ·  파일명: Index_Rev611
+  Release Version 6.10  ·  파일명: Index_Rev610
   ============================================
   ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
     자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
@@ -317,34 +317,40 @@
              진입로가 없던 문제. 헤더 설정 버튼 옆에 메모장 버튼 추가. 단 폰(좁은
              화면)에선 숨겨 헤더가 빽빽해지지 않게 하고(폰은 종전대로 왼쪽 드래그로
              진입), PC에서만 display:flex로 표시. 클릭 시 openMemo() 호출.
-  - Rev610 : [메모 데이터 손실 방지] "빈값·옛날값이 멀쩡한 데이터를 덮지 못하게."
-             일정(events) 로직은 한 줄도 건드리지 않고 메모만 두 곳 손봄.
-             (1) 입구 가드 — 클라우드 메모를 한 번이라도 받기 전(_cloudMemoLoaded)
-                 에는 cloudSaveMemo가 저장을 보류한다. "읽기 먼저, 쓰기 나중."
-                 새 기기 첫 로그인 직후 메모장을 열었다 닫아도 빈 메모가 기존
-                 히스토리를 덮어쓰는 사고가 사라진다. 스냅샷이 도착하면(문서가
-                 없는 신규 가입자 포함) 잠금이 풀리고, 그 뒤의 빈 메모는 '진짜로
-                 비어있음'이라 정상 저장된다. 로그아웃 시 플래그 리셋(계정 전환 대비).
-             (2) 출구 분리 — onCloudMemoData에서 본문과 히스토리를 나눠 처리.
-                 본문은 편집 중(메모장 열림)일 때만 덮어쓰기를 막아 쓰던 글자가
-                 튀지 않게 하고(닫혀 있으면 최신값으로 교체 = 마지막 저장이 이김),
-                 히스토리는 메모장이 열려 있어도 항상 수신·반영한다. 결과적으로
-                 본문은 한쪽이 이겨도 다른 기기에서 쌓인 버전이 히스토리엔 모두
-                 남아, "폰에서 메모장 연 사이 PC가 저장한 버전이 닫을 때 사라지던"
-                 충돌의 안전망이 된다. 메아리 방지(_lastPushedMemoJson)는 그대로라
-                 Rev608의 '내 메아리가 이력 덮어쓰기'는 재발하지 않는다.
-             (3) 인앱 브라우저 '크롬으로 열기' 오프라인 가드 — 오프라인 상태에서
-                 intent://로 크롬을 띄우면 크롬이 주소를 못 받아와 에러 페이지만
-                 뜨고 멀쩡한 인앱 화면만 잃는다. navigator.onLine이 false면 점프
-                 대신 주소만 복사하고 "연결 후 붙여넣기" 안내(복사는 오프라인 가능).
-  - Rev611 : [오프라인 안내 모달] Rev610의 오프라인 가드(토스트+주소복사)를 더
-             깔끔한 모달로 교체. 인앱 브라우저에서 '크롬으로 열기'를 눌렀는데
-             오프라인이면(navigator.onLine === false) 크롬으로 점프하지 않고,
-             DinoPlan 공룡 그림 + 말풍선("인터넷에 연결되어 있지 않아요 / 네트워크
-             상태를 확인해 주세요") + '확인' 버튼 모달을 띄운다. 확인을 누르면
-             아무 동작 없이 그냥 닫힌다(주소 복사·점프 모두 안 함). 웹 표준 요소만
-             써서 나중에 Capacitor 앱으로 빌드해도 동일하게 동작한다. 메모 손실
-             방지(Rev610의 입구 가드·출구 분리)는 그대로 유지.
+  - Rev610 : [메모 데이터 손실 방지 + 오프라인 안내 + 광고/쿠폰] 세 묶음.
+             ── A. 메모 데이터 손실 방지 ("빈값·옛날값이 멀쩡한 데이터를 덮지
+                못하게"). 일정(events) 로직은 한 줄도 안 건드리고 메모만 손봄.
+                (1) 입구 가드 — 클라우드 메모를 한 번이라도 받기 전
+                    (_cloudMemoLoaded)에는 cloudSaveMemo가 저장을 보류한다.
+                    "읽기 먼저, 쓰기 나중." 새 기기 첫 로그인 직후 메모장을 열었다
+                    닫아도 빈 메모가 기존 히스토리를 덮는 사고가 사라진다. 스냅샷이
+                    도착하면(문서 없는 신규 가입자 포함) 잠금이 풀리고, 그 뒤의 빈
+                    메모는 '진짜 비어있음'이라 정상 저장된다. 로그아웃 시 리셋.
+                (2) 출구 분리 — onCloudMemoData에서 본문과 히스토리를 나눠 처리.
+                    본문은 편집 중(메모장 열림)일 때만 덮어쓰기를 막아 쓰던 글자가
+                    튀지 않게 하고(닫혀 있으면 최신값으로 교체 = 마지막 저장이
+                    이김), 히스토리는 메모장이 열려 있어도 항상 수신·반영한다.
+                    본문이 한쪽으로 정해져도 다른 기기에서 쌓인 버전이 히스토리엔
+                    모두 남아 안전망이 된다. 메아리 방지(_lastPushedMemoJson)는
+                    그대로라 Rev608의 '내 메아리가 이력 덮어쓰기'는 재발 안 함.
+             ── B. 오프라인 안내 모달. 인앱 브라우저(카톡·인스타 등)에서 '크롬으로
+                열기'를 눌렀는데 오프라인이면(navigator.onLine === false) intent://로
+                점프하지 않는다(크롬이 주소를 못 받아와 에러 페이지만 뜨고 멀쩡한
+                인앱 화면만 잃기 때문). 대신 DinoPlan 공룡 그림 + 말풍선("인터넷에
+                연결되어 있지 않아요 / 네트워크 상태를 확인해 주세요") + '확인' 버튼
+                모달을 띄우고, 확인을 누르면 아무 동작 없이 닫는다. 새 이미지 없이
+                기존 character.png 재사용, 말풍선은 CSS로 그림. Capacitor 앱으로
+                빌드해도 동일 동작.
+             ── C. 광고 배너 자리 + 광고 제거(쿠폰) — 연결 다리. 헤더와 요일줄
+                사이에 배너 영역(#adBar) 추가. 앱(Capacitor)일 때만, 그리고
+                프리미엄이 아닐 때만 표시(웹/PC는 항상 숨김). 실제 AdMob 배너는 앱
+                빌드 때 #adBar 안에 연결. 설정에 '광고 제거' 섹션 + 8자리 쿠폰
+                입력칸 추가. 마스터 쿠폰은 코드 원문 없이 SHA-256 해시만 앱에 두고
+                입력값을 해시해 비교(소스 뜯어도 코드 노출 안 됨). 적용되면
+                프리미엄 상태를 로컬(기억) + 클라우드(calendars/{uid}.premium,
+                기기 간 동기화)에 저장하고 배너를 끈다. 프리미엄 수신은 메모
+                리스너에 얹어 처리(별도 구독 없음). 1회용 코드(Firestore coupons)는
+                나중에 추가 예정.
   ============================================
 -->
 <html lang="ko">
@@ -968,6 +974,32 @@
     font-family: inherit; cursor: pointer;
   }
   #offlineModal .off-ok:active { opacity: .85; }
+
+  /* [Rev610] 광고 배너 자리 — 헤더와 요일줄 사이.
+     기본은 숨김(웹/PC). 앱에서 광고가 켜질 때 JS가 .show를 붙여 표시하고,
+     프리미엄(광고 제거)이면 .premium이 붙어 다시 숨긴다. */
+  #adBar {
+    display: none;
+    align-items: center; justify-content: center;
+    height: 56px; background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  #adBar.show { display: flex; }
+  #adBar.premium { display: none !important; }
+  #adBar .ad-ph { font-size: 12px; color: var(--text-3); letter-spacing: 1px; }
+
+  /* 쿠폰 입력 줄 — 내보내기 버튼 줄과 비슷한 톤 */
+  .coupon-row { display: flex; gap: 10px; margin-top: 6px; }
+  .coupon-row input {
+    flex: 1; min-width: 0; padding: 11px 12px;
+    border: 1px solid var(--line); border-radius: 11px;
+    background: var(--bg); color: var(--text);
+    font-size: 15px; font-family: inherit; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .coupon-row .btn { flex: 0 0 auto; padding-left: 18px; padding-right: 18px; }
+  /* 프리미엄이면 쿠폰 입력 줄을 숨김(이미 적용됨) */
+  #couponRow.premium { display: none; }
   /* 캐릭터(공룡) — 스플래시는 크게, 로그인 화면은 조금 작게.
      켤 때 살짝 통통 튀는 느낌으로 등장. */
   .dino { display: block; width: 132px; height: auto; }
@@ -1140,6 +1172,17 @@
     }
   };
 
+  // [Rev610] 프리미엄(광고 제거) 상태를 내 칸에 저장 (events·memo 보존 — merge).
+  // 쿠폰이 적용되면 본문에서 호출한다. 다른 기기도 메모 리스너로 즉시 받는다.
+  window.cloudSavePremium = async function(isPremium) {
+    if (!currentUser) return;
+    try {
+      await setDoc(userDocRef(currentUser.uid), { premium: isPremium === true }, { merge: true });
+    } catch (e) {
+      console.warn('cloudSavePremium 실패:', e);
+    }
+  };
+
   // 내 칸의 메모 변화를 실시간 수신 (events 구독과 별개)
   window.cloudListenMemo = function() {
     if (!currentUser) return;
@@ -1151,6 +1194,11 @@
       _cloudMemoLoaded = true;
       if (!snap.exists()) return;
       const data = snap.data();
+      // [Rev610] 프리미엄(광고 제거) 상태도 같은 문서에 얹혀 오므로 함께 처리.
+      // 메모 유무와 무관하게 먼저 본다.
+      if (typeof data.premium !== 'undefined' && typeof window.onCloudPremium === 'function') {
+        window.onCloudPremium(data.premium === true);
+      }
       // 메모 필드가 아직 없는 사용자는 무시(기존 일정만 있는 문서 대비)
       if (typeof data.memo === 'undefined' && typeof data.memoHist === 'undefined') return;
       const memo = typeof data.memo === 'string' ? data.memo : '';
@@ -1271,6 +1319,10 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
       </button>
   </header>
+  <!-- [Rev610] 광고 배너 자리 — 앱(Capacitor)일 때만 실제 AdMob 배너가 들어온다.
+       프리미엄(광고 제거)이면 .premium 클래스가 붙어 숨겨진다. 웹/PC에서는
+       기본 숨김(placeholder는 개발 확인용으로만 잠깐 보일 수 있음). -->
+  <div id="adBar" aria-hidden="true"><span class="ad-ph">광고 영역</span></div>
   <div class="dow">
     <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="we"><span class="wsat">토</span><span class="wslash"> / </span><span class="wsun">일</span><span class="corner" id="cornerDates"></span></span>
   </div>
@@ -1335,10 +1387,20 @@
   <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
   <div class="set-hint" id="backupInfo"></div>
 
+  <label>광고 제거</label>
+  <div class="set-row"><span id="premiumStatus">광고가 표시됩니다</span></div>
+  <div class="coupon-row" id="couponRow">
+    <input type="text" id="couponInput" placeholder="쿠폰 코드 8자리" maxlength="8"
+           autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+           data-form-type="other" data-lpignore="true" data-1p-ignore="true" />
+    <button type="button" class="btn ghost" id="couponBtn">적용</button>
+  </div>
+  <div class="set-hint" id="couponHint"></div>
+
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.609</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.610</div>
 </div>
 
 <!-- search result sheet -->
@@ -1466,6 +1528,94 @@ function hideOfflineModal() {
   const m = $('offlineModal');
   if (m) m.classList.remove('show');
 }
+
+/* ===== [Rev610] 광고 · 쿠폰(광고 제거) · 프리미엄 =====
+   · 광고 배너: 앱(Capacitor)일 때만, 그리고 프리미엄이 아닐 때만 표시.
+     실제 AdMob 배너 연결은 앱 빌드 단계에서 이 #adBar 안에 붙인다(연결 다리).
+   · 마스터 쿠폰: 코드 원문은 앱에 없고 SHA-256 해시만 둔다. 입력값을 해시해
+     비교하므로 소스를 뜯어도 코드가 안 보인다. (1회용 코드는 나중에 Firestore로)
+   · 프리미엄 상태: 로컬(기기 기억) + 클라우드(calendars/{uid}.premium, 기기 간 동기화). */
+
+const PREMIUM_KEY = 'workcal.premium.v1';
+// 마스터 쿠폰의 SHA-256 해시 (코드 원문은 앱에 저장하지 않음)
+const MASTER_COUPON_HASH = 'f2e44079a4532674dbcd36edf3e672d143ac4857139846608cf7dba1bf0b24ff';
+
+let isPremium = false;
+// 앱(Capacitor) 환경인지 — 앱일 때만 배너를 띄운다. 웹/PC에서는 광고 없음.
+function isAppEnv() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+// 입력 문자열의 SHA-256 16진 해시
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// 배너 표시 갱신 — 앱이고 프리미엄 아닐 때만 보인다.
+function refreshAdBar() {
+  const bar = $('adBar');
+  if (!bar) return;
+  bar.classList.toggle('premium', isPremium);
+  // 앱 환경에서만 .show (웹/PC는 항상 숨김)
+  if (isAppEnv() && !isPremium) bar.classList.add('show');
+  else bar.classList.remove('show');
+}
+
+// 설정 화면의 프리미엄 안내·쿠폰칸 갱신
+function refreshPremiumUI() {
+  const st = $('premiumStatus');
+  if (st) st.textContent = isPremium ? '광고가 제거되었습니다 ✓' : '광고가 표시됩니다';
+  const row = $('couponRow');
+  if (row) row.classList.toggle('premium', isPremium);
+}
+
+// 프리미엄 상태를 적용(로컬 저장 + 화면 갱신). push=true면 클라우드에도 올린다.
+function applyPremium(on, push) {
+  isPremium = (on === true);
+  try { localStorage.setItem(PREMIUM_KEY, isPremium ? '1' : '0'); } catch(e) {}
+  refreshAdBar();
+  refreshPremiumUI();
+  if (push && window.cloudReady && typeof window.cloudSavePremium === 'function') {
+    window.cloudSavePremium(isPremium);
+  }
+}
+
+// 클라우드에서 프리미엄 상태가 도착했을 때 (다른 기기에서 쿠폰 적용 등)
+window.onCloudPremium = function(on) {
+  // 한 번 프리미엄이 됐으면 유지(클라우드가 false로 와도 끄지 않음 — 안전).
+  if (on === true && !isPremium) applyPremium(true, false);
+};
+
+// 쿠폰 적용 버튼
+async function applyCoupon() {
+  const input = $('couponInput');
+  const hint = $('couponHint');
+  if (!input) return;
+  const code = (input.value || '').trim().toUpperCase();
+  if (!code) { if (hint) hint.textContent = '쿠폰 코드를 입력해 주세요.'; return; }
+  try {
+    const h = await sha256Hex(code);
+    if (h === MASTER_COUPON_HASH) {
+      applyPremium(true, true);             // 로컬+클라우드 모두 반영
+      input.value = '';
+      if (hint) hint.textContent = '쿠폰이 적용되어 광고가 제거되었습니다.';
+      showToast('광고가 제거되었습니다 ✓');
+    } else {
+      if (hint) hint.textContent = '유효하지 않은 쿠폰입니다.';
+    }
+  } catch(e) {
+    if (hint) hint.textContent = '쿠폰 확인 중 오류가 났어요. 잠시 후 다시 시도해 주세요.';
+  }
+}
+
+// 앱 시작 시 로컬에 기억된 프리미엄 상태를 먼저 반영(클라우드는 로그인 후 따라옴)
+function initPremium() {
+  try { isPremium = (localStorage.getItem(PREMIUM_KEY) === '1'); } catch(e) { isPremium = false; }
+  refreshAdBar();
+  refreshPremiumUI();
+}
+/* ===== /광고 · 쿠폰 · 프리미엄 ===== */
 const pad = n => String(n).padStart(2,'0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
 const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
@@ -2680,6 +2830,9 @@ $('exportBtn').onclick = exportBackup;
 $('importBtn').onclick = () => $('importFile').click();
 $('importFile').onchange = (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
 $('searchBtn').onclick = runSearch;
+// [Rev610] 쿠폰 적용 버튼 + 엔터키
+if ($('couponBtn')) $('couponBtn').onclick = applyCoupon;
+if ($('couponInput')) $('couponInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } });
 // 메모장 버튼들
 $('memoBack').onclick = closeMemo;
 $('memoHistoryBtn').onclick = openMemoHistory;
@@ -2736,6 +2889,8 @@ render();
 requestAnimationFrame(() => requestAnimationFrame(render));
 // 메모 본문·이력 초기 로드(로컬)
 loadMemo();
+// [Rev610] 프리미엄(광고 제거) 상태 초기 반영 — 로컬 기억 먼저, 클라우드는 로그인 후 따라옴
+initPremium();
 
 /* ===== 인증 + 클라우드 연동 (3.0) =====
    흐름:
