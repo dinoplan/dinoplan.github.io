@@ -2,7 +2,7 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.09  ·  파일명: Index_Rev609
+  Release Version 6.11  ·  파일명: Index_Rev611
   ============================================
   ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
     자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
@@ -317,6 +317,34 @@
              진입로가 없던 문제. 헤더 설정 버튼 옆에 메모장 버튼 추가. 단 폰(좁은
              화면)에선 숨겨 헤더가 빽빽해지지 않게 하고(폰은 종전대로 왼쪽 드래그로
              진입), PC에서만 display:flex로 표시. 클릭 시 openMemo() 호출.
+  - Rev610 : [메모 데이터 손실 방지] "빈값·옛날값이 멀쩡한 데이터를 덮지 못하게."
+             일정(events) 로직은 한 줄도 건드리지 않고 메모만 두 곳 손봄.
+             (1) 입구 가드 — 클라우드 메모를 한 번이라도 받기 전(_cloudMemoLoaded)
+                 에는 cloudSaveMemo가 저장을 보류한다. "읽기 먼저, 쓰기 나중."
+                 새 기기 첫 로그인 직후 메모장을 열었다 닫아도 빈 메모가 기존
+                 히스토리를 덮어쓰는 사고가 사라진다. 스냅샷이 도착하면(문서가
+                 없는 신규 가입자 포함) 잠금이 풀리고, 그 뒤의 빈 메모는 '진짜로
+                 비어있음'이라 정상 저장된다. 로그아웃 시 플래그 리셋(계정 전환 대비).
+             (2) 출구 분리 — onCloudMemoData에서 본문과 히스토리를 나눠 처리.
+                 본문은 편집 중(메모장 열림)일 때만 덮어쓰기를 막아 쓰던 글자가
+                 튀지 않게 하고(닫혀 있으면 최신값으로 교체 = 마지막 저장이 이김),
+                 히스토리는 메모장이 열려 있어도 항상 수신·반영한다. 결과적으로
+                 본문은 한쪽이 이겨도 다른 기기에서 쌓인 버전이 히스토리엔 모두
+                 남아, "폰에서 메모장 연 사이 PC가 저장한 버전이 닫을 때 사라지던"
+                 충돌의 안전망이 된다. 메아리 방지(_lastPushedMemoJson)는 그대로라
+                 Rev608의 '내 메아리가 이력 덮어쓰기'는 재발하지 않는다.
+             (3) 인앱 브라우저 '크롬으로 열기' 오프라인 가드 — 오프라인 상태에서
+                 intent://로 크롬을 띄우면 크롬이 주소를 못 받아와 에러 페이지만
+                 뜨고 멀쩡한 인앱 화면만 잃는다. navigator.onLine이 false면 점프
+                 대신 주소만 복사하고 "연결 후 붙여넣기" 안내(복사는 오프라인 가능).
+  - Rev611 : [오프라인 안내 모달] Rev610의 오프라인 가드(토스트+주소복사)를 더
+             깔끔한 모달로 교체. 인앱 브라우저에서 '크롬으로 열기'를 눌렀는데
+             오프라인이면(navigator.onLine === false) 크롬으로 점프하지 않고,
+             DinoPlan 공룡 그림 + 말풍선("인터넷에 연결되어 있지 않아요 / 네트워크
+             상태를 확인해 주세요") + '확인' 버튼 모달을 띄운다. 확인을 누르면
+             아무 동작 없이 그냥 닫힌다(주소 복사·점프 모두 안 함). 웹 표준 요소만
+             써서 나중에 Capacitor 앱으로 빌드해도 동일하게 동작한다. 메모 손실
+             방지(Rev610의 입구 가드·출구 분리)는 그대로 유지.
   ============================================
 -->
 <html lang="ko">
@@ -905,6 +933,41 @@
     font-size: 30px; font-weight: 700; letter-spacing: 0.5px;
   }
   #authSplash.hide { opacity: 0; pointer-events: none; }
+
+  /* [Rev611] 오프라인 안내 모달 — 공룡 그림 + 말풍선 + 확인 버튼.
+     네트워크가 없을 때 깔끔하게 안내하고, 확인을 누르면 그냥 닫힌다.
+     앱(Capacitor)으로 빌드해도 동일하게 동작하도록 웹 표준 요소만 사용. */
+  #offlineModal {
+    position: fixed; inset: 0; z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(44,44,42,0.45); padding: 24px;
+  }
+  #offlineModal.show { display: flex; }
+  #offlineModal .off-card {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    background: #e8dfc9; color: #2c2c2a;
+    border-radius: 20px; padding: 26px 22px 22px; max-width: 320px; width: 100%;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.22);
+    animation: dinoPop 0.4s ease-out;
+  }
+  #offlineModal .dino { width: 150px; }
+  /* 말풍선 — 공룡 아래, 꼬리는 위쪽을 향한다 */
+  #offlineModal .off-bubble {
+    position: relative; background: #fff; color: #4a443a;
+    border-radius: 14px; padding: 14px 16px; font-size: 14.5px;
+    line-height: 1.6; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  #offlineModal .off-bubble::before {
+    content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-bottom: 9px solid #fff;
+  }
+  #offlineModal .off-ok {
+    width: 100%; background: #2f7d6e; color: #fff; border: none;
+    border-radius: 12px; padding: 13px; font-size: 16px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  #offlineModal .off-ok:active { opacity: .85; }
   /* 캐릭터(공룡) — 스플래시는 크게, 로그인 화면은 조금 작게.
      켤 때 살짝 통통 튀는 느낌으로 등장. */
   .dino { display: block; width: 132px; height: auto; }
@@ -1049,6 +1112,7 @@
   window.cloudStop = function() {
     if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
     if (_unsubMemo) { _unsubMemo(); _unsubMemo = null; }
+    _cloudMemoLoaded = false;   // [Rev610] 계정 전환 대비: 다음 로그인도 '받기 먼저'부터
   };
 
   /* ---- 3-b) 메모 동기화 (Rev606, B방식: 일정과 독립) ----
@@ -1058,10 +1122,15 @@
      events 필드는 보존된다. 어느 한쪽이 깨져도 다른 쪽에 영향 없음. */
   let _lastPushedMemoJson = null;   // 메아리 방지(메모 전용)
   let _unsubMemo = null;            // 메모 구독 해제 함수
+  let _cloudMemoLoaded = false;     // [Rev610] 클라우드 메모를 한 번이라도 받았는가
+                                    // (받기 전엔 빈 메모를 절대 올리지 않음 — 첫 로그인 덮어쓰기 방지)
 
   // 메모 본문/이력을 내 칸에 저장 (events는 손대지 않음 — merge)
   window.cloudSaveMemo = async function(memo, memoHist) {
     if (!currentUser) return;
+    // [Rev610] 입구 잠그기: 클라우드를 아직 한 번도 못 받았으면 저장 보류.
+    // "읽기 먼저, 쓰기 나중" — 새 기기 첫 로그인 때 빈 메모가 기존 데이터를 덮는 사고 차단.
+    if (!_cloudMemoLoaded) return;
     try {
       const payload = { memo, memoHist, memoAt: Date.now() };
       _lastPushedMemoJson = JSON.stringify({ memo, memoHist });
@@ -1076,6 +1145,10 @@
     if (!currentUser) return;
     if (_unsubMemo) { _unsubMemo(); _unsubMemo = null; }
     _unsubMemo = onSnapshot(userDocRef(currentUser.uid), (snap) => {
+      // [Rev610] 스냅샷이 도착했다 = 클라우드를 봤다. 문서가 없어도(신규 가입자)
+      // "봤다"는 유효한 수신이므로 여기서 쓰기 잠금을 푼다. 이후의 빈 메모는
+      // '동기화된 빈값'(진짜 비어있음)이므로 정상적으로 올라가도 된다.
+      _cloudMemoLoaded = true;
       if (!snap.exists()) return;
       const data = snap.data();
       // 메모 필드가 아직 없는 사용자는 무시(기존 일정만 있는 문서 대비)
@@ -1160,6 +1233,15 @@
     <div class="inapp-text">카카오톡 등 앱 안에서 열면 구글 로그인이 막혀요.<br>아래 버튼으로 브라우저에서 열어 주세요.</div>
     <button type="button" class="inapp-btn" id="openBrowserBtn">브라우저로 열기</button>
     <button type="button" class="inapp-copy" id="copyUrlBtn">주소 복사</button>
+  </div>
+</div>
+
+<!-- [Rev611] 오프라인 안내 모달 — 공룡 그림 + 말풍선 + 확인 -->
+<div id="offlineModal">
+  <div class="off-card">
+    <img class="dino" src="character.png" alt="DinoPlan" />
+    <div class="off-bubble">인터넷에 연결되어 있지 않아요.<br>네트워크 상태를 확인해 주세요.</div>
+    <button type="button" class="off-ok" id="offlineOkBtn">확인</button>
   </div>
 </div>
 
@@ -1373,6 +1455,16 @@ function showToast(text) {
   _toastEl.style.display = 'block';
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { if (_toastEl) _toastEl.style.display = 'none'; }, 2500);
+}
+
+// [Rev611] 오프라인 안내 모달 — 공룡 그림 + 말풍선. 확인을 누르면 그냥 닫는다.
+function showOfflineModal() {
+  const m = $('offlineModal');
+  if (m) m.classList.add('show');
+}
+function hideOfflineModal() {
+  const m = $('offlineModal');
+  if (m) m.classList.remove('show');
 }
 const pad = n => String(n).padStart(2,'0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
@@ -2665,17 +2757,28 @@ window.onCloudData = function(incoming) {
 // 클라우드에서 메모(본문/이력)가 도착하면 화면/로컬 갱신 (일정과 독립)
 window.onCloudMemoData = function(memo, memoHist) {
   const panelOpen = $('memoPanel') && $('memoPanel').classList.contains('open');
-  // 메모장을 편집 중일 때는 들어오는 값으로 덮어쓰지 않는다.
-  // (작성 중 본문이 바뀌거나, 닫을 때 쌓은 이력이 지워지는 것을 방지)
-  if (panelOpen) return;
-  memoText = (typeof memo === 'string') ? memo : '';
-  memoHistory = Array.isArray(memoHist) ? memoHist : [];
-  try {
-    localStorage.setItem(MEMO_KEY, memoText);
-    localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory));
-  } catch(e) {}
-  // 이력창이 열려 있으면 목록 다시 그림
-  if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
+
+  // [Rev610] 본문과 히스토리를 분리 처리한다.
+  //  · 본문(memoText): 화면 textarea에 직접 들어가므로, 편집 중(panelOpen)에는
+  //    덮어쓰지 않는다(쓰던 글자가 튀는 것 방지). 닫혀 있을 때만 최신값으로 교체.
+  //    → 본문은 못 합치므로 "마지막에 저장한 쪽이 최신"으로 남는다(덮어쓰기).
+  //  · 히스토리(memoHistory): 화면에 타이핑되는 값이 아니라 뒤에 쌓이는 기록이므로
+  //    메모장이 열려 있어도 항상 받는다. → 다른 기기에서 쌓인 버전이 사라지지 않는다.
+  //    (본문 충돌로 진 버전도 히스토리엔 남아 안전망이 된다)
+
+  // 본문: 닫혀 있을 때만 갱신
+  if (!panelOpen) {
+    memoText = (typeof memo === 'string') ? memo : '';
+    try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+  }
+
+  // 히스토리: 항상 갱신 (열려 있어도)
+  if (Array.isArray(memoHist)) {
+    memoHistory = memoHist;
+    try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {}
+    // 이력창이 열려 있으면 목록 다시 그림
+    if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
+  }
 };
 
 // Firebase 모듈이 준비된 뒤 콜백 실행 (이미 준비됐으면 즉시)
@@ -2763,6 +2866,13 @@ $('googleSignInBtn').onclick = () => { if (window.authSignIn) window.authSignIn(
 
   // 안드로이드: intent로 크롬 강제 실행
   function openInChrome() {
+    // [Rev611] 오프라인이면 크롬으로 점프해봤자 크롬이 주소를 못 받아와
+    // 에러 페이지만 뜨고 멀쩡한 인앱 화면만 잃는다. 점프 대신 공룡 안내
+    // 모달을 띄우고, 확인을 누르면 그냥 닫는다(아무 동작도 하지 않음).
+    if (navigator.onLine === false) {
+      showOfflineModal();
+      return;
+    }
     if (isAndroid) {
       // https:// 를 떼고 intent 스킴으로 — 크롬에서 열도록 지정
       const noScheme = url.replace(/^https?:\/\//, '');
@@ -2800,6 +2910,9 @@ $('googleSignInBtn').onclick = () => { if (window.authSignIn) window.authSignIn(
   if ($('copyUrlBtn')) $('copyUrlBtn').onclick = copyUrl;
 })();
 /* ===== /인앱 브라우저 처리 ===== */
+
+// [Rev611] 오프라인 모달 확인 버튼 — 인앱 감지와 무관하게 항상 연결.
+if ($('offlineOkBtn')) $('offlineOkBtn').onclick = hideOfflineModal;
 
 
 $('signOutBtn').onclick = () => {
