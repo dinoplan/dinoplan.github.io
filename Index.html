@@ -1,0 +1,3309 @@
+<!DOCTYPE html>
+<!--
+  업무 캘린더 (Work Calendar)
+  ============================================
+  Release Version 6.13  ·  파일명: Index_Rev613
+  ============================================
+  ★ 안정 버전 (STABLE / 6.05) — 헤더 4종 토글 + 달 넘김 흔들림 해결 + 입력칸
+    자동채우기 차단 + 검색 결과 시트 겹침 해결 + To-Do 메모장(왼쪽 드래그)
+    & 수정 이력(카드형, 날짜·시:분). 메모는 현재 로컬 저장. 이후 작업은 여기서 이어간다.
+  ============================================
+  [Rev612 변경점 — 메모 임시 방어]
+    · 증상: (드물게) 메모장 첫 진입 시 memoText가 비어 빈 화면이 보이고,
+            그 상태로 닫으면 빈값이 클라우드를 덮을 위험.
+    · 방어: openMemo에서 memoText가 비어 있을 때만 클라우드를 1회 직접 읽어
+            memoText를 채운 뒤 textarea에 뿌린다(단일 루트: 항상 textarea=memoText).
+            클라우드도 비었으면 빈값 그대로 인정(재시도/대기 없음).
+            읽기 실패 시 기존 memoText 유지 — 클라우드는 절대 건드리지 않음.
+    · 근본 원인(이사 merge 누락 추정)은 미해결로 남김. 이건 증상 차단용 안전망.
+  ============================================
+  [버전 이력]
+  - Rev100 : 세로/가로/태블릿/PC 호환 (반응형). 글자 크기를 칸 너비에 맞춰
+             자동 조절. 음성 입력, 자동·수동 백업, 일정 종류별 색,
+             2026 공휴일, 다크모드 포함한 정식 출시 버전.
+  - Rev101 : 일정 검색 추가(제목·내용 동시 검색, 최신순 정렬, 검색어 형광펜).
+             검색 결과 → 상세 수정 후 '뒤로'(화면 버튼 + 폰 뒤로가기)로
+             검색 목록 복귀. 메모 입력칸 높이 확대. 모든 시트 높이를 화면의
+             72%로 제한해 위쪽 달력(요일·1주차)이 항상 보이도록 함. 날짜별
+             일정 목록에서 메모 전체 표시. 설정창 닫기 버튼 제거(뒷배경 탭으로
+             닫힘). 백업 내보내기/가져오기 버튼 가로 2칸 배치. 키보드가 올라온
+             상태에서 시트 드래그 시 뒤 달력이 떨리던 현상(스크롤 체이닝) 차단.
+  - Rev102 : 업무(work) 종류는 하루짜리 일정도 배경 음영(파스텔 색)이
+             적용되도록 변경. 일정 추가/수정 시 업무는 하루/여러날 모두
+             배경색 선택 가능. 중요·휴일·개인 종류는 기존대로 음영 없음.
+  - Rev103 : 우하단 새일정(+) 버튼을 헤더 설정 옆으로 이동(설정과 같은 크기).
+             헤더에 개인일정 표시/숨김 토글 추가 — 끄면 달력에서 개인일정이
+             감춰지고(날짜를 누르면 상세에선 보임) 칸에 여유가 생김. 설정값은
+             기기에 저장돼 다음에도 유지. 시작일이 주말(토/일)이면 '업무'
+             종류를 막고 '중요일정'으로 자동 전환하며 "주말에는 업무 일정을
+             설정할 수 없습니다" 안내 표시.
+  - Rev104 : 새 업무 일정 추가 시, 그 달에 이미 쓰인 배경색을 피해 아직 안
+             쓰인 색을 기본값으로 자동 지정(c0부터 순서대로). 달을 걸친
+             일정은 양쪽 달 모두에서 쓰인 것으로 계산. 9색이 모두 쓰였으면
+             c0부터 다시 순환. (수정 시에는 기존 색 유지)
+  - Rev105 : 키보드가 올라올 때 입력 중 시트가 미세하게 출렁이던 떨림 제거
+             (visualViewport scroll 보정 제거, 키보드 높이 변동 4px 미만 무시,
+             스크롤 보정은 즉시·1회만). 메모(textarea)처럼 시트 안에서 자체
+             스크롤되는 영역을 만질 때는 그쪽 스크롤을 우선하고, 끝에 닿았을
+             때만 시트로 전달되도록 터치 가드 개선(메모 스크롤 중 시트가 통째로
+             움직이던 충돌 해결).
+  - Rev106 : 배경색 팔레트를 '캔디' 테마로 교체(분홍·주황·노랑·초록·하늘·
+             파랑·보라·핑크·회색). 기존보다 채도를 높여 9색 구분을 또렷하게 함.
+             (JS PALETTE와 색 선택 스와치 CSS 동시 적용)
+  - Rev107 : 같은 칸에 여러 일정이 겹칠 때 막대 쌓이는 순서를 종류 우선순위로
+             정렬(휴일 > 중요 > 업무 > 개인). 우선순위 높은 종류가 위쪽 줄에
+             표시됨. (공휴일 이름은 기존대로 항상 최상단)
+  - Rev108 : 요일 헤더 정리 — 월~금을 날짜보다 약간 진한 회색+볼드로, '주말'
+             칸을 '토 / 일'로 분리(토=파랑, 슬래시=볼드 회색, 일=빨강)하고 월~금과
+             세로 정렬을 맞춤. 오늘 표시 개선 — 평일 오늘은 동그라미를 빼고 날짜를
+             쨍한 파랑(#1a73e8)으로 + 연한 쨍파랑 음영을 깔아 기간 막대와 겹치지
+             않게 함. 주말 오늘은 업무 음영이 올 일이 없어 쨍파랑 동그라미로 표시.
+             라이트/다크 모드 각각 색 보정. (오늘이 주말일 때 표시 누락도 해결)
+  - Rev200 : 클라우드 동기화 1차 (메이저 2.00). Firebase(Firestore) 연동.
+             폰 저장(localStorage)은 그대로 두고, save() 시 클라우드
+             (calendars/shared 문서 한 칸)에 일정 전체를 통째로 올림. 앱 켜질 때
+             클라우드 변화를 실시간 수신하여 화면에 반영(PC-폰 연동). load() 및
+             기존 기능 로직은 건드리지 않음. ※ 현재 DB는 테스트 모드 — 본인 기기
+             연동용까지만, 파트원 배포는 로그인(예정) 이후.
+  - Rev201 : 우상단 직전달 토/일 코너의 일정 제목을 6글자까지만 표시하고
+             넘으면 …을 붙여 항상 7칸으로 고정(너무 길어 보이던 현상 해결).
+             제목이 짧아진 만큼 코너 칸 너비도 30vw→25vw(220→180px)로 축소.
+             좁아진 칸에 맞춰 코너 일정 글자 크기 미세 조정.
+  - Rev202 : '오늘' 표시 색을 파랑→밝은 민트로 변경(토/일 색과 겹침 해결).
+             평일 오늘은 연한 민트 음영+청록 글자, 주말 오늘은 진한 민트
+             동그라미+흰 숫자. 볼드 제거(촌스러움).
+  - Rev203 : 일정 글자 굵기를 화면 폭에 따라 자동 조절. 폰 세로(좁은 칸)는
+             700 유지, 폰 가로·PC(넓은 화면, 600px↑)는 500으로 가늘게.
+             막대 라벨·주말 코너 일정에 --ev-weight 변수 적용.
+  - Rev204 : 주말(토/일) 코너에 쌓이는 일정(주요/개인/휴일)을 가로 가운데
+             정렬로 변경. .wevs에 align-items:center, .we-ev에 text-align:center.
+  - Rev205 : 일정 상세 시트에서 왼쪽 색 동그라미 제거. 대신 제목 글자색을
+             종류별로 구분(업무=검정, 중요=파랑, 개인=초록, 휴일=빨강).
+  - Rev206 : 상세 시트 제목 볼드 제거(전 종류 보통 굵기). 색으로만 구분.
+             기간·메모(부가 내용)는 기존 회색 유지.
+  - Rev207 : 상세 시트의 기간·메모(부가 내용)도 종류색으로 통일.
+             제목보다 살짝 흐리게(opacity 0.7)로 위계 유지.
+  - Rev208 : 캐시 방지 메타 태그 추가(Cache-Control/Pragma/Expires).
+             코드 갱신 시 옛 버전이 캐시로 남는 문제 완화.
+             (단, 이미 박힌 캐시 1회·홈화면 아이콘은 수동 갱신 필요)
+  - Rev209 : 정사각형 등 넓은 비율에서 일정 글자가 과대 확대되는 문제 완화.
+             막대 라벨 상한 16→13px, 주말 코너 일정 15→12px.
+             (좁은 화면 유연성은 그대로, 커지는 천장만 낮춤)
+  - Rev300 : 로그인 추가 (메이저 3.00). Firebase Authentication + 구글 로그인.
+             구조를 세 층으로 분리 — 초기화 / 인증 층(누가 로그인했나) /
+             데이터 층(그 사람의 일정 칸). 데이터 저장 위치를 고정 'shared'에서
+             로그인 사용자별 'calendars/{uid}'로 변경(개인 캘린더). 앱 시작 시
+             로그인 게이트(구글 로그인 화면)를 거쳐야 캘린더가 열린다. 최초
+             로그인 시 옛 shared 일정을 내 칸으로 1회 자동 이사(shared 원본은
+             보존). 설정에 계정 표시·로그아웃 추가. 기존 일정/검색/백업/렌더
+             로직은 그대로 두고 바깥에 인증 층만 씌움. ※ 향후 팀/패밀리 공유는
+             userDocRef(다른uid) 재사용 + 보안 규칙 확장으로 얹을 수 있게 설계.
+  - Rev301 : 자잘한 정리. 설정의 로그아웃 버튼을 가로 꽉 채움(.btn.block).
+             로그인 화면의 '업무 캘린더' 부제 제거(DinoPlan 로고만 표시).
+  - Rev302 : 로그아웃 버튼을 내보내기/가져오기와 같은 음영 배경(.ghost)으로
+             통일하고 가로 한 줄 꽉 채움. .btn.block은 폭/여백만 담당하도록
+             정리(배경·글자색은 함께 붙는 .ghost 등이 결정).
+  - Rev303 : 시작 화면을 'DinoPlan' 로고 스플래시로 변경(기존 '불러오는 중…'
+             대체). 최소 0.8초 표시 후 0.4초 페이드아웃(로딩이 빨라도 깜빡임
+             없음, 느려도 자연스럽게 전환). hideSplash로 숨김 로직 일원화.
+  - Rev304 : 공휴일 이름 글자가 넓은 화면(PC)에서 다른 일정보다 크고 굵게
+             튀던 문제 수정. 크기 공식·상한(12px)·굵기(--ev-weight)를 일반
+             막대 일정과 동일하게 맞춤. 색(빨강)은 유지.
+  - Rev305 : 달력 위아래 제스처로 달 넘기기 추가. 폰은 그리드 세로 스와이프
+             (위로 밀면 다음 달), PC는 마우스 휠. 시트/피커가 열려 있으면
+             비활성(기존 닫기 드래그와 충돌 방지). 실수 방지로 60px 이상·세로
+             우세일 때만 동작. 달 이동은 goMonth(±1) 공용 함수로 처리.
+  - Rev306 : 달 넘김에 슬라이드 애니메이션 추가(다음 달은 아래에서 올라오고
+             이전 달은 위에서 내려오며 0.22s 페이드인). 제스처로 넘길 때만
+             적용(제목 피커 점프는 기존대로 즉시). 렌더 로직은 그대로 두고
+             그려진 그리드에 클래스만 입힘.
+  - Rev307 : 버그 수정 3건. (1) 제목을 눌러 연 년/월 피커에서 목록을 위아래로
+             굴려도 스크롤되지 않던 문제 — 터치 가드가 .picker-col을 자체 스크롤
+             영역으로 인정하지 않아 막혔던 것을 수정(다른 달로 이동 가능).
+             (2) 우상단 코너(직전·다음 달 토/일)에 오는 공휴일의 이름이 표시되지
+             않던 문제 — 주말 칸에서 '현재 달'일 때만 이름을 그리던 조건 제거.
+             (3) (2)와 같은 원인으로, 다음 달 첫날이 주말 코너에 보일 때(예: 2026
+             3/1 일) 이름이 빠지던 것도 함께 해결.
+  - Rev308 : 공휴일 '날짜 숫자 색' 보강. (1) 평일 미리보기 칸(예: 신정 1/1)의
+             다른 달 공휴일 날짜가 회색이던 것을 빨강+흐림으로. (2) 우상단 코너
+             주말이 공휴일이면(예: 2027 추석 9/25토·9/26일) 토/일 모두 빨강+흐림
+             으로 표시하고 이름도 함께(추석연휴 등). month 한정 조건 제거 +
+             .cell.other .dnum.holiday 규칙 추가.
+  - Rev309 : 우상단 코너(헤더 옆 직전달 토/일)는 본문 주말칸과 별도 코드라
+             Rev307~308 수정이 닿지 않았음. 코너에도 공휴일 처리 추가 — 날짜를
+             빨강(흐림)으로, 공휴일 이름(예: 추석연휴)을 표시(일정 제목보다 우선).
+  - Rev310 : 평일 미리보기 칸의 공휴일 '이름'(예: 신정)도 직전/다음 달이면
+             흐릿하게 통일(기존엔 날짜 숫자만 흐리고 이름은 진했음). 공휴일
+             막대에 다른 달이면 .other(opacity 0.5) 적용.
+  - Rev311 : 주말칸의 직전/다음 달 공휴일 이름(예: 10/3 개천절이 토요일이라
+             주말칸으로 그려지던 경우)도 흐릿하게 통일. Rev310은 평일 막대만
+             처리했어서 주말 공휴일 이름이 진하게 남던 것을 보완. 이제 공휴일
+             이름 흐림이 평일 막대·주말칸·우상단 코너 세 곳 모두 일관됨.
+  - Rev312 : 직전/다음 달 '일반 일정' 막대도 흐릿하게(기존엔 날짜만 흐리고
+             일정 내용은 진했음). 막대가 걸친 첫 칸이 다른 달이면 .other-ev
+             (opacity 0.5). 이로써 다른 달 표시(날짜·공휴일·일반일정)가 모두 통일.
+  - Rev313 : 달력 끝줄 주말칸에 오는 직전/다음 달 주말(예: 7/4·7/5) 일정 내용도
+             흐릿하게. Rev312는 평일 막대만 처리했고 주말칸 일정(.wevs)은 빠져
+             있었음. other-ev 흐림을 .bar와 .wevs 공통으로 적용.
+  - Rev314 : 'DinoPlan' 공룡 캐릭터(크레용 톤 청록 트리케라톱스 후드 + 사람
+             얼굴)를 SVG로 직접 그려 세 곳에 배치. (1) 홈 화면 아이콘 — manifest에
+             공룡 아이콘 PNG(192/512, maskable)와 apple-touch-icon 등록. "홈 화면에
+             추가" 시 공룡 아이콘 표시. (2) 시작 스플래시 — 로고 위에 캐릭터(통통
+             튀는 등장 애니메이션). (3) 로그인 화면 — 구글 로그인 버튼 위에 캐릭터.
+             별도 이미지 파일 없이 전부 파일 1개 안에 인라인. 기능 로직은 변경 없음.
+  - Rev315 : [개발용] 로그인 화면에 '로그인 없이 둘러보기' 건너뛰기 버튼 추가.
+             로그인 전이라 클라우드 동기화는 빼고 폰 안 저장으로만 동작(일정 추가·
+             수정·달력 모두 정상). 확인 작업이 끝나면 배포 전 제거 예정. 코드에서
+             '[개발용 건너뛰기]'로 표시된 세 군데(HTML 버튼·CSS·JS 핸들러)를
+             지우면 원래 로그인 필수 상태로 돌아간다.
+  - Rev316 : 직접 그린 SVG 캐릭터 대신 업로드한 원본 그림에서 잘라낸 실제
+             캐릭터 이미지로 교체. (1) 메인 캐릭터(크레용·가방 멘 전신)를 잘라
+             가장자리 경계 흐림(feather) 처리 후 스플래시·로그인에 사용. (2) 홈
+             아이콘은 원본 우하단 6개 중 첫 번째(연필 공룡 + DinoPlan 메모지)를
+             잘라 manifest/apple-touch-icon에 등록. 종이 질감 배경이 다크모드에서
+             네모로 떠 보이는 것을 막기 위해 스플래시·로그인 배경을 항상 크림색
+             (#efe9dd)으로 통일. 건너뛰기 버튼을 또렷한 박스형으로 키움(캐시로
+             옛 버전이 떠 있을 때 새 버전인지 바로 구분되도록).
+  - Rev317 : [배포용] 개발용 '건너뛰기' 기능 3블록(HTML·CSS·JS) 완전 제거 →
+             로그인 필수 상태로 복귀. 메인 캐릭터 이미지의 가장자리 경계 흐림을
+             더 강하게(블러 40) 다시 처리해 크림 배경에 네모 자국 없이 녹아들게 함.
+  - Rev318 : 홈 화면 아이콘 깔끔화. 기존엔 투명 여백이 검은색으로 보이고 모서리가
+             잘렸음. 원본 첫 번째 아이콘(연필 공룡 손 + DinoPlan 메모지)을 흰 둥근
+             사각 영역에 맞춰 다시 자르고, 크림빛 흰색(#f7f5f0) 정사각 배경에 꽉
+             차게(96%) 배치. maskable과 any 아이콘을 분리 등록해 폰이 둥글게/원형
+             으로 깎아도 잘리거나 검은 여백이 생기지 않도록 함.
+  - Rev318a: 앱 이름을 '업무 캘린더' → 'DinoPlan'으로 통일(manifest name/short_name,
+             apple-mobile-web-app-title, title 태그). 앱 켤 때 폰이 띄우는 화면과
+             홈 아이콘 이름이 'DinoPlan'으로 표시됨. (스플래시 캐릭터는 유지)
+  - Rev319 : 카톡·인스타·페북 등 인앱 브라우저에서 열면 구글 로그인이 막히는
+             문제 대응. userAgent로 인앱 브라우저를 감지해, 그럴 때만 로그인 화면에
+             안내 박스 + '브라우저로 열기'·'주소 복사' 버튼을 표시(일반 브라우저엔
+             숨김). 안드로이드는 intent:// 스킴으로 크롬을 직접 띄우고, 아이폰 등
+             강제 실행이 막히는 환경은 주소 복사로 유도. 로그인 로직 자체는 변경 없음.
+  - Rev320 : 설정에 '홈 화면에 앱 추가' 버튼 추가. 안드로이드 크롬은
+             beforeinstallprompt를 잡아 버튼 클릭 시 실제 설치 팝업을 띄움. 이미 앱
+             으로 실행 중이면 버튼을 숨기고 안내로 대체, iOS·기타 환경은 수동 추가
+             방법을 토스트로 안내. (자동 추가는 보안상 불가하므로 버튼/안내 방식)
+  - Rev321 : Rev320에서 넣은 '홈 화면에 앱 추가'(PWA 설치 버튼 + beforeinstallprompt
+             관련) 기능을 전부 제거. 설정에서 해당 섹션(HTML·JS) 삭제. 인앱 브라우저
+             감지/안내(Rev319, 카톡 등에서 '브라우저로 열기')는 그대로 유지.
+             ※ 홈 화면 추가는 사용자가 브라우저 메뉴로 직접 하는 방식으로 되돌림.
+  - Rev322 : 달력 전체를 'DinoPlan' 크레용 그림과 어울리는 종이 테마로 변경. 라이트
+             모드 배경을 흰색→크림색(#efe9dd, 스플래시·로그인과 통일), 칸 선은 검정
+             →연필빛 갈색 옅은 선, 글자는 먹색 갈색, 토/일·포인트색(초록)도 종이 톤에
+             맞춰 조정. 다크 모드도 차가운 회색→갈색이 도는 따뜻한 짙은 톤으로 재조정.
+             주말칸 음영을 은은하게 낮추고 theme-color 메타도 크림색으로. 색은 전부
+             CSS 변수에서 흐르므로 기능/로직 변경은 없음.
+  - Rev323 : 종이 톤을 한 단계 더 진하게. 배경 크림색 #efe9dd→#e8dfc9, surface도 살짝
+             올림. theme-color·스플래시·로그인 배경까지 같은 톤으로 통일. (색만 조정)
+  - Rev324 : 검색 결과 목록의 제목도 종류별 색으로 표시(업무=검정, 중요=파랑,
+             개인=초록, 휴일=빨강). 상세 시트와 동일한 evTextColor 규칙 재사용
+             (다크모드 자동 보정 포함). 검색어 형광펜 강조는 그대로 유지.
+  - Rev326 : 스플래시·로그인 캐릭터 이미지의 테두리 네모 자국 제거. 배경을 한 톤
+             올린(#e8dfc9) 뒤 이미지 가장자리가 옛 톤이라 네모로 떠 보이던 문제를,
+             가장자리를 훨씬 강하게 페이드시키고 배경색(#e8dfc9)을 이미지에 사전
+             합성해 해결. 그림 외곽이 살짝 부드러워졌지만 경계 자국 없이 자연스러움.
+  - Rev327 : 붉은색 통일. 유저가 만든 '휴일일정' 색(#d63a3a)이 국가공휴일·일요일
+             (--sun #b6493b)과 살짝 달랐던 것을, 종이톱 --sun으로 통일(다크는
+             #e8897c). 휴일 종류 칩 선택색도 동일하게 맞춤. 이제 공휴일·일요일·
+             휴일일정 세 빨강이 모두 같은 색.
+  - Rev328 : 헤더 개인일정 토글 옆에 '공휴일+휴일일정' 토글 추가(달력+빨간점
+             아이콘, 꾸면 빗금). 하나로 둘 다 온/오프. ꖓ면 국가공휴일 이름과 유저
+             '휴일일정'이 달력에서 숨음(날짜 눌러 상세엔 보임). 설정은 기기에
+             저장돼 유지. holidayShown()·isVisibleType() 헬퍼로 처리. 일요일 날짜
+             빨강은 '요일 색'이므로 그대로 유지.
+  - Rev329 : 휴일 토글을 꺼도 공휴일 '날짜 숫자 색(빨강)'은 항상 유지하도록 수정.
+             이전엔 끄면 날짜 색까지 평일/요일색으로 돌아갔음(특히 토요일 공휴일이
+             파랑으로). 평일·주말·코너 세 곳의 날짜 색은 holidayName(항상),
+             이름·막대는 holidayShown(토글)으로 분리. 이제 공휴일 날짜는 토글과
+             무관하게 늘 빨강(토요일 공휴일도 파랑→빨강 유지), 이름만 숨겨짐.
+  - Rev330 : manifest 색을 본문 배경과 통일. theme_color #ffffff→#e8dfc9,
+             background_color #efe9dd→#e8dfc9. 앱 켤 때 폰이 띄우는 상단바·시작
+             배경색이 실제 달력 배경(#e8dfc9, --bg)과 일치하게 됨. (HTML
+             theme-color 메타·스플래시·로그인 배경은 이미 #e8dfc9였음, manifest
+             두 줄만 옛 값으로 남아있던 것을 맞춤. 색만 조정, 로직 변경 없음)
+  - Rev400 : PWA standalone 모드 해제 (메이저 4.00). manifest display
+             "standalone"→"browser"로 변경. 크롬에서 '홈 화면에 추가' 시 '앱
+             설치'가 아니라 바로가기만 생성됨(삼성 인터넷과 동일 동작). 일부 기기
+             (예: 갤럭시 노트20)에서 standalone(독립 앱) 실행 시 검은 화면 +
+             전체 터치 불가 + 강제 재시작이 발생하던 문제의 회피책. 사용자가 실수로
+             standalone 앱을 설치해 기기 먹통을 겪는 사고를 막는 목적. manifest와
+             공룡 아이콘은 그대로 두므로 바로가기 아이콘은 여전히 공룡으로 표시됨.
+             ※ 근본 원인(standalone에서의 먹통)은 미규명 상태이며 이는 통로 차단용
+             회피책임. 향후 standalone 복귀가 필요하면 display값을 "browser"→
+             "standalone"으로 되돌리면 됨. 앱 본체 로직은 변경 없음.
+  - Rev500~ : [먹통 원인 규명 + 근본 해결] Rev400의 'standalone 해제'는 회피책일
+             뿐 근본 원인이 아니었음. 진짜 원인은 manifest가 index.html 안에 거대한
+             data-URI로 박혀 있고 start_url이 "."(상대경로)였던 것 — 홈 아이콘
+             전체화면(standalone) 실행 시 시작 위치를 못 잡아 검은 화면+먹통.
+             해결: (1) manifest를 별도 manifest.json 파일로 분리하고 start_url을
+             절대경로 "/index.html", scope "/"로 고정. (2) 아이콘을 data-URI 대신
+             외부 파일(icon-192.png·icon-512.png, 저장소 루트)로 분리. 화면 멈춤
+             지점을 추적하기 위한 디버그 계측(검은 STEP 패널)을 임시로 넣어 노트20
+             에서 STEP 0~6 정상 통과를 확인.
+  - Rev600 : [정식 배포 / 메이저 6.00] manifest display "browser"→"standalone"으로
+             복귀(이제 '앱 설치'로 뜸, 노트20에서 standalone? true·먹통 없음 확인).
+             설정창 오른쪽 하단에 버전 표기(Ver.) 추가 — 앞으로 현재 버전은 항상
+             여기서 갱신(캐시로 옛 버전이 떠 있는지 한눈에 구분). 먹통 추적용 디버그
+             계측(검은 STEP 패널·전역 에러 캐처·STEP 0~6·타임아웃)을 전부 제거.
+             앱 본체 로직은 변경 없음. ※ 별도 파일 manifest.json / icon-192.png /
+             icon-512.png / character.png 가 저장소 루트에 함께 있어야 동작.
+  - Rev601 : 헤더 표시 토글을 4종류로 확장. 기존 개인·휴일 2개에 더해 업무
+             (클립보드 아이콘)·중요(깃발 아이콘) 토글 추가. 헤더 순서는
+             업무·중요·개인·휴일·＋·설정. 업무=먹색·중요=파랑으로 켜짐 표시,
+             끄면 다른 토글과 동일하게 흐림+빗금. isVisibleType()에 showWork·
+             showImportant 분기 추가(각각 기기에 저장돼 유지). 새 일정 '종류'
+             칩 순서도 업무·중요·휴일·개인 → 업무·중요·개인·휴일로 변경(헤더
+             토글 순서와 통일). 업무·중요 아이콘은 22px로 키워 개인·휴일(20px)과
+             시각 균형을 맞춤.
+  - Rev602 : 달력을 위로 드래그해 다음 달로 넘길 때 헤더(년월·토글·＋·설정)와
+             요일줄 등 위쪽 고정 영역이 통째로 흔들리던 문제 해결. 원인은 그리드
+             세로 드래그 도중 브라우저 기본 동작(스크롤·주소창 숨김 움찔)을 막지
+             않았던 것 — touchstart/touchend만 있고 touchmove가 없었음. 위로 끄는
+             방향만 시스템 스크롤과 엮여 흔들렸고 아래(이전 달)는 무사했던 이유.
+             그리드에 touchmove(passive:false) 추가, 세로 우세 드래그일 때만
+             preventDefault로 기본 동작을 차단. 달 넘김 로직·애니메이션은 그대로.
+  - Rev603 : 입력칸(제목·메모·검색)을 누르면 키보드 위에 안드로이드 자동채우기
+             줄(열쇠=비밀번호·카드=신용카드·위치=주소)이 뜨던 문제 해결. 일정
+             앱엔 불필요한 줄이고 설정창 버튼까지 가렸음. 세 입력칸에 자동채우기
+             차단 신호(autocomplete=off, autocorrect=off, autocapitalize=off,
+             spellcheck=false, data-form-type=other, data-lpignore, data-1p-ignore)
+             를 부여 — 삼성 키보드에서 자동채우기 줄 사라짐 확인. ※ 키보드 자체의
+             글자 추천(예: '오라'→오라버니)은 키보드 기능이라 그대로 유지됨.
+             + 검색 결과 시트 겹침 해결: 검색을 실행하면 설정 시트를 닫고 검색
+             시트만 띄운다(결과가 0~소수일 때 검색 시트가 짧아지며 뒤의 설정
+             시트가 비쳐 제목·핸들이 이중으로 보이던 문제 제거). 검색을 닫으면
+             (닫기 버튼·폰 뒤로가기) 설정 시트로 자동 복귀. 검색→항목→수정→뒤로
+             동선은 기존대로 검색 목록 복귀 유지. searchFromSettings 플래그로 제어.
+  - Rev604 : [To-Do 메모장 추가] 달력에서 왼쪽으로 드래그하면 오른쪽에서 전체
+             메모장 패널이 슬라이드로 등장. 제목 없는 빈 메모장 하나(자유 입력).
+             상단 얇은 바: 왼쪽 '‹ 달력'(닫기) / 오른쪽 History 아이콘. 메모장에서
+             오른쪽 드래그 또는 '달력' 버튼으로 닫음. 닫을 때 본문을 로컬 저장하고,
+             열었을 때와 내용이 다르면 수정 이력에 스냅샷 1개(날짜+시:분) 추가
+             (변경 없으면 추가 안 함, 최근 500개 상한). History 아이콘 → 전체 큰
+             창에 이력을 날짜+시:분별로 최신순 나열(아래로 스크롤), 맨 아래 닫기.
+             폰 뒤로가기로 이력창→메모장→달력 순으로 단계적으로 닫힘. ※ 저장은
+             현재 로컬(localStorage)만 — 클라우드 동기화는 다음 버전에서 별도 칸으로
+             추가 예정(일정 동기화에 영향 없도록). 일정/검색/달 넘김 로직은 불변.
+             · 메모장 상단 바 가운데에 오늘 날짜·요일 표시(예: 6월 16일 (화)).
+             · 메모장에서 오른쪽 드래그 시 달력으로 복귀. 가로 우세 드래그면
+               텍스트 칸 안에서 시작해도 허용(메모는 가로 스크롤이 없어 편집과
+               충돌 없음). 세로 드래그는 textarea 스크롤로 유지.
+             · 상단 바 탭(버튼 외 영역)으로 키보드 내림. textarea라 자동채우기 줄
+               (열쇠·카드)은 원래 안 뜸. 키보드 높이(--kb)만큼 아래 여백 확보.
+             · 상단 바가 상태바에 가리던 문제 수정(safe-area-inset-top이 0인 기기
+               대비 최소 28px 상단 여백 보장).
+  - Rev605 : 메모 수정 이력 화면을 검색 결과와 동일한 카드 형태로 변경(항목마다
+             배경 surface + 둥근 모서리 + 10px 간격, 기존 밑줄 구분 대체). 메모장
+             상단 바 3요소('‹ 달력'·가운데 날짜·History 아이콘)의 색을 달력 헤더
+             아이콘과 동일한 --text-2로 통일(이전엔 '달력'만 진해 톤이 어긋났음).
+             라이트/다크 모드 모두 테마 변수로 자동 대응.
+  - Rev606 : [메모 클라우드 동기화 추가 / B방식] To-Do 메모장 본문(memo)과 수정
+             이력(memoHist)을 Firebase에 동기화해 PC-폰에서 함께 보도록 함.
+             일정 동기화(events)에 영향이 없도록 같은 사용자 문서에 '별도 필드'로
+             merge 저장 — 일정 로직(cloudSave/cloudListen/onCloudData)은 손대지
+             않음. 신규 함수 cloudSaveMemo/cloudListenMemo/onCloudMemoData로 독립
+             처리하고, 메아리 방지(_lastPushedMemoJson)·로그아웃 시 구독 해제도
+             일정과 분리. saveMemoBody/saveMemoHistory에 클라우드 push만 얹어
+             로컬 저장 동작은 종전 그대로 유지. 수신 시 메모장/이력창이 열려
+             있으면 화면도 갱신(입력 중 textarea는 값 덮어쓰지 않음).
+  - Rev607 : [백업에 메모 포함] 설정의 내보내기/가져오기(.json)에 메모 본문(memo)과
+             이력(memoHist)을 함께 담도록 확장. 백업 형식 version 1→2. 내보내기는
+             {events, memo, memoHist} 저장. 가져오기는 메모 필드가 있는 백업(v2+)일
+             때만 메모도 복원하고, 메모 없는 구버전(v1) 백업은 기존처럼 일정만
+             복원해 호환 유지. 복원 시 클라우드에도 반영(saveMemoBody/saveMemoHistory)
+             되고, 메모장/이력창이 열려 있으면 화면도 갱신(입력 중 textarea 제외).
+             확인 문구·완료 안내·토스트를 메모 포함 여부에 맞춰 표시.
+  - Rev608 : [메모 이력 안 쌓이던 버그 수정] 메모를 적고 나가면(닫기/뒤로/달력) 즉시
+             수정 이력이 남도록 closeMemo를 정리. 원인은 Rev606 동기화에서 닫을 때
+             본문을 먼저 push → 그 메아리(onCloudMemoData)가 방금 쌓은 이력을 옛
+             값으로 덮어쓰던 것. 이제 닫을 때 (1)변경 판정 → (2)이력 먼저 쌓기 →
+             (3)로컬 저장 → (4)본문+이력을 클라우드에 '한 번에' push 순서로 처리.
+             popstate(폰 뒤로가기) 경로도 중복 코드를 closeMemo() 호출로 통일.
+             또한 메모장이 열려 있는 동안에는 onCloudMemoData가 본문/이력을 덮어쓰지
+             않도록 가드(편집 중 보호). import 복원도 본문+이력 1회 push로 정리.
+  - Rev609 : [PC용 메모 버튼] PC(넓은 화면 ≥600px)에선 왼쪽 드래그가 어려워 메모장
+             진입로가 없던 문제. 헤더 설정 버튼 옆에 메모장 버튼 추가. 단 폰(좁은
+             화면)에선 숨겨 헤더가 빽빽해지지 않게 하고(폰은 종전대로 왼쪽 드래그로
+             진입), PC에서만 display:flex로 표시. 클릭 시 openMemo() 호출.
+  - Rev610 : [메모 데이터 손실 방지 + 오프라인 안내 + 광고/쿠폰] 세 묶음.
+             ── A. 메모 데이터 손실 방지 ("빈값·옛날값이 멀쩡한 데이터를 덮지
+                못하게"). 일정(events) 로직은 한 줄도 안 건드리고 메모만 손봄.
+                (1) 입구 가드 — 클라우드 메모를 한 번이라도 받기 전
+                    (_cloudMemoLoaded)에는 cloudSaveMemo가 저장을 보류한다.
+                    "읽기 먼저, 쓰기 나중." 새 기기 첫 로그인 직후 메모장을 열었다
+                    닫아도 빈 메모가 기존 히스토리를 덮는 사고가 사라진다. 스냅샷이
+                    도착하면(문서 없는 신규 가입자 포함) 잠금이 풀리고, 그 뒤의 빈
+                    메모는 '진짜 비어있음'이라 정상 저장된다. 로그아웃 시 리셋.
+                (2) 출구 분리 — onCloudMemoData에서 본문과 히스토리를 나눠 처리.
+                    본문은 편집 중(메모장 열림)일 때만 덮어쓰기를 막아 쓰던 글자가
+                    튀지 않게 하고(닫혀 있으면 최신값으로 교체 = 마지막 저장이
+                    이김), 히스토리는 메모장이 열려 있어도 항상 수신·반영한다.
+                    본문이 한쪽으로 정해져도 다른 기기에서 쌓인 버전이 히스토리엔
+                    모두 남아 안전망이 된다. 메아리 방지(_lastPushedMemoJson)는
+                    그대로라 Rev608의 '내 메아리가 이력 덮어쓰기'는 재발 안 함.
+             ── B. 오프라인 안내 모달. 인앱 브라우저(카톡·인스타 등)에서 '크롬으로
+                열기'를 눌렀는데 오프라인이면(navigator.onLine === false) intent://로
+                점프하지 않는다(크롬이 주소를 못 받아와 에러 페이지만 뜨고 멀쩡한
+                인앱 화면만 잃기 때문). 대신 DinoPlan 공룡 그림 + 말풍선("인터넷에
+                연결되어 있지 않아요 / 네트워크 상태를 확인해 주세요") + '확인' 버튼
+                모달을 띄우고, 확인을 누르면 아무 동작 없이 닫는다. 새 이미지 없이
+                기존 character.png 재사용, 말풍선은 CSS로 그림. Capacitor 앱으로
+                빌드해도 동일 동작.
+             ── C. 광고 배너 자리 + 광고 제거(쿠폰) — 연결 다리. 헤더와 요일줄
+                사이에 배너 영역(#adBar) 추가. 앱(Capacitor)일 때만, 그리고
+                프리미엄이 아닐 때만 표시(웹/PC는 항상 숨김). 실제 AdMob 배너는 앱
+                빌드 때 #adBar 안에 연결. 설정에 '광고 제거' 섹션 + 8자리 쿠폰
+                입력칸 추가. 마스터 쿠폰은 코드 원문 없이 SHA-256 해시만 앱에 두고
+                입력값을 해시해 비교(소스 뜯어도 코드 노출 안 됨). 적용되면
+                프리미엄 상태를 로컬(기억) + 클라우드(calendars/{uid}.premium,
+                기기 간 동기화)에 저장하고 배너를 끈다. 프리미엄 수신은 메모
+                리스너에 얹어 처리(별도 구독 없음). 1회용 코드(Firestore coupons)는
+                나중에 추가 예정.
+  - Rev611 : [메모 본문 갱신 조건 정교화 + 오프라인 안내 모달] 두 묶음.
+             ── A. 메모 본문 갱신을 "메모장 열림"이 아니라 "실제 편집 중"일 때만
+                막도록 변경(onCloudMemoData). Rev610까지는 메모장이 떠 있기만 하면
+                (panelOpen) 다른 기기에서 온 본문을 통째로 무시했다. 그래서 메모장을
+                열어 가만히 보고만 있어도 최신 내용이 화면에 안 들어왔고, 그 상태로
+                닫으면 옛 화면값이 클라우드 최신을 덮어쓰는 사고가 났다(PC로 새로
+                로그인해 메모장을 잠깐 열었다 닫았더니 어제 폰에서 쓴 메모·이력이
+                옛 PC 로컬값으로 덮인 문제). 이제 편집 중 판정을 두 신호의 OR로
+                본다 — (1) textarea 포커스(isEditing, 실제 타이핑 중) (2) 열었을 때와
+                내용이 달라짐(isDirty, 저장 안 한 내 수정 있음). 둘 다 아니면(닫혀
+                있거나 열고 구경만) 서버 최신을 화면·로컬에 반영하고 기준 스냅샷
+                (_memoOpenSnapshot)도 함께 갱신해, 이후 닫을 때 옛값으로 덮는 일이
+                없게 한다. 하나라도 참이면 본문은 안 덮고(내 글자·수정 보호) 히스토리만
+                받는다(종전 유지). 일정(events)은 원래 편집 폼과 분리돼 뒤에서 자연
+                갱신되므로 손대지 않음. ※ 본문은 합치기 불가라 충돌 시 "마지막 저장이
+                최신"은 그대로. 입구 가드(_cloudMemoLoaded)·메아리 방지도 그대로.
+             ── B. (Rev610 작업분에 이어 유지) 인앱 브라우저에서 '크롬으로 열기'를
+                눌렀을 때 오프라인이면 intent:// 점프 대신 공룡 안내 모달을 띄운다.
+  - Rev612 : [메모 임시 방어] 메모장 첫 진입 시 memoText가 비어 빈 화면이 뜨고
+             그대로 닫으면 빈값이 클라우드를 덮을 위험 → openMemo에서 memoText가
+             비었을 때만 클라우드를 1회 직접 읽어 채운 뒤 textarea에 반영(단일 루트).
+             클라우드도 비었으면 빈값 인정, 읽기 실패 시 기존 memoText 유지(클라우드
+             불변). 근본 원인은 미해결, 증상 차단용 안전망. (상세는 상단 변경점 박스)
+  - Rev613 : [메모장 모바일 브라우저 빈 여백 버그 수정] CSS 2줄만 변경.
+             삼성인터넷·크롬 등 모바일 브라우저에서 메모(여러 줄)를 끝까지 끌어내린
+             뒤 한 번 더 끌어내리면 글이 화면 중간에서 끊기고 아래에 키보드 높이만큼
+             빈 공간이 드러나던 문제. 원인은 키보드 회피용 아래 여백(var(--kb))을
+             textarea를 감싼 .memo-body에 줘서, 브라우저가 그 여백을 "스크롤 가능한
+             빈 공간"으로 인식해 끌어올린 것. 해결: 여백을 .memo-body에서 떼고 같은
+             크기로 #memoText 안쪽 padding-bottom으로 옮김 → 여백이 글 내용의 일부가
+             되어 끝줄에서 딱 멈춤. 키보드 회피 크기(--kb)는 동일해 글자 가림 없음.
+             Capacitor 앱은 웹뷰가 화면을 줄여 --kb≈0이라 종전과 동일(영향 없음).
+             일정·동기화·메모 저장 로직은 한 줄도 안 건드림.
+  ============================================
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<!-- 캐시 방지: 코드 갱신 시 옛 버전이 남지 않도록 매번 최신 확인 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e8dfc9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DinoPlan">
+<title>DinoPlan</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+  :root {
+    /* 종이(크레용) 테마 — 크림색 배경에 잉크빛 선/글자 */
+    --bg: #e8dfc9;          /* 크림 종이색 (한 톤 진하게) */
+    --surface: #ddd2b8;     /* 살짝 진한 크림 (입력칸·칩 배경) */
+    --line: rgba(90,72,45,0.18);       /* 연필선 느낌의 갈색빛 옅은 선 */
+    --line-strong: rgba(90,72,45,0.32);
+    --text: #3a3327;        /* 먹색에 가까운 진한 갈색 */
+    --text-2: #6e6453;
+    --text-3: #a89c84;
+    --dow-text: #574e3d;
+    --sat: #3f6f9c;         /* 종이톤에 맞춰 살짝 가라앉은 파랑 */
+    --sun: #b6493b;         /* 살짝 가라앉은 빨강(주홍) */
+    --accent: #2f7d6e;      /* DinoPlan 로고 초록 — 포인트색 통일 */
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      /* 따뜻한 어둠 — 차가운 회색 대신 갈색이 도는 짙은 톤 */
+      --bg: #25211b;
+      --surface: #322d25;
+      --line: rgba(232,214,180,0.20);
+      --line-strong: rgba(232,214,180,0.34);
+      --text: #ece5d6;
+      --text-2: #c2b69d;
+      --text-3: #877c69;
+      --dow-text: #d8cdb6;
+      --sat: #7ba9d6;
+      --sun: #e8897c;
+      --accent: #6cc0ad;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    overscroll-behavior: none;
+  }
+  body.sheet-open #app { overflow: hidden; }
+  body.sheet-open .grid { pointer-events: none; }
+  /* 시트(설정/검색/일정추가 등)가 열려 키보드가 올라올 때, 뒤 달력 전체가
+     밀리거나 확대되지 않도록 html/body 자체를 고정한다 */
+  html.sheet-open, body.sheet-open {
+    position: fixed; left: 0; right: 0; top: 0; bottom: 0;
+    width: 100%; height: 100%; overflow: hidden;
+    overscroll-behavior: none; touch-action: none;
+  }
+  #app {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px 6px;
+  }
+  .head-actions { display: flex; align-items: center; gap: 2px; }
+  .head-btn {
+    background: transparent; border: none; color: var(--text-2); cursor: pointer;
+    padding: 5px; line-height: 0; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .head-btn:active { background: var(--surface); }
+  /* 메모 버튼은 PC(넓은 화면)에서만 — 폰은 왼쪽 드래그로 진입 */
+  .head-btn#memoBtn { display: none; }
+  @media (min-width: 600px) { .head-btn#memoBtn { display: flex; } }
+  /* 업무일정 토글: 켜짐=먹색, 꺼짐=흐림+빗금 */
+  .head-btn#workToggle { color: var(--text); }
+  .head-btn#workToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#workToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  /* 중요일정 토글: 켜짐=파랑, 꺼짐=흐림+빗금 */
+  .head-btn#importantToggle { color: #2563a8; }
+  .head-btn#importantToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#importantToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  @media (prefers-color-scheme: dark) { .head-btn#importantToggle { color: #7fb3ed; } }
+  /* 개인일정 숨김(off) 상태: 토글 버튼을 흐리게 + 빗금 느낌으로 표시 */
+  .head-btn#personalToggle { color: #1d9e75; }
+  .head-btn#personalToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#personalToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  @media (prefers-color-scheme: dark) { .head-btn#personalToggle { color: #5fd3a8; } }
+  /* 공휴일·휴일일정 토글: 켜짐=빨강, 꺼짐=흐림+빗금 (개인토글과 동일 방식) */
+  .head-btn#holidayToggle { color: #b6493b; }
+  .head-btn#holidayToggle.off { color: var(--text-3); position: relative; }
+  .head-btn#holidayToggle.off::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+    height: 2px; background: var(--text-3); transform: rotate(-45deg);
+  }
+  @media (prefers-color-scheme: dark) { .head-btn#holidayToggle { color: #e8897c; } }
+  .title-btn {
+    display: flex; align-items: center; gap: 6px; background: transparent; border: none;
+    color: var(--text); font-size: 21px; font-weight: 600; cursor: pointer;
+    padding: 4px 2px; font-family: inherit;
+  }
+  .title-btn .caret { font-size: 13px; color: var(--text-2); }
+  .title-btn:active { opacity: .7; }
+  .nav { display: flex; gap: 6px; }
+  .nav button, .today-btn {
+    border: 0.5px solid var(--line-strong); background: transparent; color: var(--text);
+    border-radius: 10px; width: 38px; height: 34px; font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .today-btn { width: auto; padding: 0 12px; font-size: 13px; white-space: nowrap; }
+  .nav button:active, .today-btn:active { background: var(--surface); }
+
+  .picker {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    transform: translateY(100%); transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    padding: 8px 0 calc(18px + env(safe-area-inset-bottom));
+  }
+  .picker.open { transform: translateY(0); }
+  .picker-cols { display: flex; height: 240px; }
+  .picker-col { flex: 1; overflow-y: auto; text-align: center; }
+  .picker-col .opt {
+    padding: 13px 0; font-size: 18px; color: var(--text-3); cursor: pointer;
+  }
+  .picker-col .opt.sel { color: var(--text); font-weight: 700; font-size: 20px; }
+  .picker-col .opt:active { background: var(--surface); }
+
+  .dow {
+    display: grid; grid-template-columns: repeat(5, 1fr) 0.8fr;
+    padding: 56px 8px 4px;
+    align-items: center;
+    overflow: visible;
+  }
+  .dow span {
+    text-align: center; font-size: 13px; color: var(--dow-text); font-weight: 600; padding: 2px 0;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .dow .we { position: relative; }
+  .dow .we .wsat { color: var(--sat); }
+  .dow .we .wsun { color: var(--sun); }
+  .dow .we .wslash { color: var(--dow-text); font-weight: 700; padding: 0 3px; }
+  .corner {
+    position: absolute; right: 0; top: -56px; display: flex; flex-direction: column;
+    gap: 0; width: 25vw; max-width: 180px;
+    font-weight: 400; line-height: 1;
+  }
+  .corner-row {
+    display: flex; align-items: center; gap: 4px; cursor: pointer;
+    padding: 2px 2px 3px; border-bottom: 0.5px solid var(--line);
+    min-height: 15px;
+    width: 100%; min-width: 0; box-sizing: border-box;
+  }
+  .corner-row .cdate { flex: none; font-size: 13px; font-weight: 400 !important; }
+  .corner-row.sat .cdate { color: var(--sat); opacity: 0.5; }
+  .corner-row.sun .cdate { color: var(--sun); opacity: 0.5; }
+  /* 코너 날짜가 공휴일이면 토/일 상관없이 빨강(흐림) */
+  .corner-row .cdate.holiday { color: var(--sun) !important; opacity: 0.5; }
+  /* 코너에 표시되는 공휴일 이름 */
+  .corner-row .corner-hol {
+    flex: 1 1 0; min-width: 0; font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 5.8), 15px);
+    font-weight: 400; opacity: 0.5; color: var(--sun);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .corner-ev {
+    display: block !important; flex: 1 1 0; min-width: 0;
+    font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 5.8), 15px) !important; font-weight: 400 !important; opacity: 0.5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .grid { flex: 1; display: flex; flex-direction: column; padding: 0 8px 8px; min-height: 0; }
+  /* 달 넘김 슬라이드 — 새 달이 위/아래에서 살짝 밀려들어오며 페이드인.
+     .slide-up = 다음 달(아래에서 올라옴), .slide-down = 이전 달(위에서 내려옴) */
+  @keyframes monthSlideUp   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes monthSlideDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+  .grid.slide-up   { animation: monthSlideUp   0.22s ease-out; }
+  .grid.slide-down { animation: monthSlideDown 0.22s ease-out; }
+  /* 일정 글자 굵기: 칸이 좁은 폰 세로에선 700(잘 보이게), 화면이 넓어지면(폰 가로·PC) 500으로 가늘게 */
+  :root { --ev-weight: 700; }
+  @media (min-width: 600px) { :root { --ev-weight: 500; } }
+  .week { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr) 0.8fr; gap: 1px; min-height: 0; position: relative; overflow: hidden; }
+  .cell {
+    border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+    padding: 3px 3px 0;
+    overflow: hidden; cursor: pointer; min-width: 0; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .week .cell:first-child { border-left: none; }
+  .week:last-child .cell { border-bottom: 1px solid var(--line); }
+  .cell.other .dnum { color: var(--text-3); }
+  /* 다른 달(미리보기) 공휴일 날짜: 빨강을 유지하되 흐릿하게 */
+  .cell.other .dnum.holiday { color: var(--sun); opacity: 0.5; }
+  .dnum { font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .dnum.sat { color: var(--sat); }
+  .dnum.sun { color: var(--sun); }
+  .dnum.holiday { color: var(--sun); }
+  .holiday-name {
+    font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 6.2), 12px); font-weight: var(--ev-weight, 700); color: var(--sun);
+    line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px; text-align: center; padding: 0 4px; box-sizing: border-box;
+  }
+  .cell.today { background: rgba(64,224,208,0.18); }
+  .cell.today .dnum { font-weight: 400; color: #0d9488; }
+  @media (prefers-color-scheme: dark) {
+    .cell.today { background: rgba(80,230,215,0.14); }
+    .cell.today .dnum { color: #5eead4; }
+    .we-half.we-today .wd { background: #14b8a6; }
+  }
+  .we-nums { font-size: 10px; }
+  .we-nums .s1 { color: var(--sat); }
+  .we-nums .s2 { color: var(--sun); }
+  .we-nums .cm { color: var(--text-3); }
+  .cell.other .we-nums .s1, .cell.other .we-nums .s2 { color: var(--text-3); }
+
+  /* split weekend cell: Saturday top, Sunday bottom */
+  .cell.weekend { padding: 0; }
+  .we-half {
+    flex: 1; min-height: 0; padding: 3px 2px; position: relative;
+    display: flex; flex-direction: column; cursor: pointer; overflow: hidden;
+  }
+  .we-half.top { border-bottom: 1px solid var(--line); background: rgba(63,111,156,0.045); }
+  .we-half.bot { background: rgba(182,73,59,0.05); }
+  .we-half .wd { font-size: 13px; line-height: 1.3; }
+  .we-half.top .wd { color: var(--sat); }
+  .we-half.bot .wd { color: var(--sun); }
+  .cell.weekend.other .we-half.top .wd { color: var(--sat); opacity: 0.45; }
+  .cell.weekend.other .we-half.bot .wd { color: var(--sun); opacity: 0.45; }
+  .we-half .wd.wd-holiday { color: var(--sun) !important; }
+  /* 오늘이 주말일 때: 업무 음영이 올 일 없으므로 동그라미로 표시(볼드 없음) */
+  .we-half.we-today .wd {
+    background: #14b8a6; color: #fff; border-radius: 50%; font-weight: 400;
+    width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; align-self: flex-start;
+  }
+  .we-half .wevs { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-top: 1px; overflow: hidden; }
+  .we-ev {
+    font-size: clamp(7px, calc(var(--cellw, 60px) * 0.8 / 6.2), 12px); line-height: 1.3; font-weight: var(--ev-weight, 700);
+    color: #e23b3b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; max-width: 100%;
+  }
+  @media (prefers-color-scheme: dark) { .we-ev { color: #ff7676; } }
+  .we-more { font-size: 9px; color: var(--text-3); }
+
+  .events { margin-top: 2px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .ev {
+    font-size: 10px; line-height: 1.3; border-radius: 3px; padding: 1px 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ev.c0 { background: rgba(37,99,168,0.16); color: var(--sat); }
+  .ev.c1 { background: rgba(186,117,23,0.18); color: #9a5f12; }
+  .ev.c2 { background: rgba(29,158,117,0.18); color: #0f6e56; }
+  .ev.c3 { background: rgba(212,83,126,0.16); color: #993556; }
+  @media (prefers-color-scheme: dark) {
+    .ev.c1 { color: #f0b766; }
+    .ev.c2 { color: #6fd0ac; }
+    .ev.c3 { color: #ee9; }
+  }
+  .ev.span-mid, .ev.span-start { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .ev.span-mid, .ev.span-end { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -3px; }
+  .ev.span-mid { margin-right: -3px; }
+  .ev.span-start { margin-right: -3px; }
+  .more { font-size: 9px; color: var(--text-3); padding-left: 4px; }
+
+  /* multi-day / single bars laid over the week */
+  .barlayer { position: absolute; left: 0; right: 0; top: 20px; bottom: 2px; pointer-events: none; }
+  .bar {
+    position: absolute; height: 16px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; cursor: pointer; overflow: hidden;
+    padding: 0 5px;
+  }
+  .bar .lbl {
+    font-size: clamp(7px, calc(var(--cellw, 60px) / 7.8), 13px); line-height: 1; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0;
+    font-weight: var(--ev-weight, 700); padding: 0;
+  }
+  .bar.holiday-bar .lbl { color: var(--sun); }
+  /* 직전/다음 달 공휴일 이름은 흐릿하게 (날짜 숫자와 통일) */
+  .bar.holiday-bar.other { opacity: 0.5; }
+  /* 주말칸의 직전/다음 달 공휴일 이름도 흐릿하게 */
+  .holiday-name.other-hol { opacity: 0.5; }
+  /* 직전/다음 달 일반 일정도 흐릿하게 (막대 .bar, 주말칸 .wevs 공통) */
+  .bar.other-ev, .wevs.other-ev { opacity: 0.5; }
+  /* line that fills the space between the label and the arrowhead */
+  .bar .line { flex: 1 1 2px; height: 0; border-top: 1.5px solid currentColor; min-width: 0; }
+  /* arrowhead drawn as a CSS triangle, sitting flush on the line */
+  .bar .head { flex: 0 0 auto; width: 0; height: 0; }
+  .bar .head.l {
+    border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+    border-right: 5px solid currentColor;
+  }
+  .bar .head.r {
+    border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+    border-left: 5px solid currentColor;
+  }
+  .bar.c0 { background: rgba(37,99,168,0.18); }
+  .bar.c1 { background: rgba(186,117,23,0.20); }
+  .bar.c2 { background: rgba(29,158,117,0.20); }
+  .bar.c3 { background: rgba(212,83,126,0.18); }
+  .bar { color: #1a1a1a; }
+  @media (prefers-color-scheme: dark) {
+    .bar { color: #f2f2f2; }
+  }
+  .bar.cont-l { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  .bar.cont-r { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+  /* ===== To-Do 메모장 패널 ===== */
+  #memoPanel {
+    position: fixed; inset: 0; z-index: 30;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    /* 상태바(시계·배터리)에 상단 바가 가리지 않도록 여유 확보.
+       일부 기기에서 safe-area-inset-top이 0으로 잡혀도 최소 여백을 보장한다. */
+    padding-top: max(env(safe-area-inset-top), 28px);
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateX(100%);
+    transition: transform .26s cubic-bezier(.2,.8,.2,1);
+  }
+  #memoPanel.open { transform: translateX(0); }
+  .memo-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; border-bottom: 1px solid var(--surface);
+  }
+  .memo-bar-btn {
+    display: flex; align-items: center; gap: 4px;
+    background: none; border: none; color: var(--text-2);
+    font-size: 15px; font-weight: 600; padding: 6px 8px; cursor: pointer;
+    border-radius: 8px;
+  }
+  .memo-bar-btn:active { background: var(--surface); }
+  .memo-bar-btn.icon-only { color: var(--text-2); }
+  .memo-today { font-size: 14px; font-weight: 600; color: var(--text-2); }
+  /* 메모 본문 영역: 래퍼가 화면을 채우고, 안쪽 여백(빈 공간)은 탭하면 키보드를
+     내리고 드래그하면 달력으로 돌아가는 영역이 된다. textarea는 그 위에 얹힌다. */
+  .memo-body {
+    flex: 1; min-height: 0; display: flex;
+    padding: 6px;
+    touch-action: pan-y;
+  }
+  #memoText {
+    flex: 1; width: 100%; box-sizing: border-box;
+    border: none; outline: none; resize: none;
+    background: transparent; color: var(--text);
+    font-size: 16px; line-height: 1.6;
+    padding: 8px 8px calc(8px + var(--kb, 0px));
+    font-family: inherit;
+    touch-action: pan-y;
+  }
+  /* ===== 메모 수정 이력 (전체 큰 창) ===== */
+  #memoHistory {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    /* 달력처럼 위쪽 공간을 남긴다(상태바 + 약간) */
+    top: calc(env(safe-area-inset-top) + 36px);
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    display: flex; flex-direction: column;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.18);
+  }
+  #memoHistory.open { transform: translateY(0); }
+  .mh-head { padding: 16px 18px 8px; }
+  .mh-head h2 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text); }
+  .mh-list {
+    flex: 1; overflow-y: auto; padding: 4px 18px 8px;
+    display: flex; flex-direction: column; gap: 10px;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  .mh-item {
+    padding: 12px 14px; background: var(--surface); border-radius: 10px;
+  }
+  .mh-when { font-size: 12px; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
+  .mh-body { font-size: 14px; line-height: 1.55; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .mh-empty { color: var(--text-3); text-align: center; padding: 40px 0; }
+  .mh-foot { padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); }
+
+  /* sheet */
+  .scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 10;
+  }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    transform: translateY(100%); transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    padding: 4px 18px calc(14px + env(safe-area-inset-bottom));
+    /* 시트가 화면을 꽉 덮지 않도록 위쪽 공간을 항상 남긴다.
+       (요일줄 + 1주차 첫 줄이 보여서, 그 부분을 탭해 달력으로 바로 나갈 수 있음)
+       내용이 이보다 길면 시트 안에서 스크롤된다. */
+    max-height: 72dvh; overflow-y: auto;
+    overscroll-behavior: contain; /* 시트 스크롤이 끝에 닿아도 뒤 달력으로 전달되지 않게 */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y; /* 시트 안에서는 세로 스크롤만, 가로/뒤로 전달 방지 */
+    /* 키보드가 올라오면 시트 자체를 점프시키지 않고, 아래쪽에 키보드 높이만큼
+       여백(padding)만 확보한다. 시트는 바닥에 고정돼 있어 들썩이지 않는다 */
+    padding-bottom: calc(14px + env(safe-area-inset-bottom) + var(--kb, 0px));
+  }
+  .sheet.open { transform: translateY(0); }
+  .grab { width: 38px; height: 4px; background: var(--line-strong); border-radius: 99px; margin: 4px auto 8px; }
+  .sheet h2 { font-size: 17px; font-weight: 600; margin: 0 0 10px; }
+  .edit-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .edit-head h2 { margin: 0 0 10px; }
+  .back-btn {
+    display: none; align-items: center; gap: 3px; margin: 0 0 10px;
+    background: var(--surface); border: 0.5px solid var(--line-strong); color: var(--text);
+    border-radius: 10px; padding: 6px 11px 6px 8px; font-size: 13px; font-weight: 700;
+    font-family: inherit; cursor: pointer; line-height: 1;
+  }
+  .back-btn svg { display: block; }
+  .back-btn:active { opacity: .7; }
+  .edit-head.from-search .back-btn { display: flex; }
+  .day-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .day-ev {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--surface); border-radius: 10px; cursor: pointer;
+  }
+  .day-ev .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.c0 { background: var(--sat); } .dot.c1 { background: #ba7517; }
+  .dot.c2 { background: #1d9e75; } .dot.c3 { background: #d4537e; }
+  .day-ev .info { flex: 1; min-width: 0; }
+  .day-ev .t { font-size: 14px; }
+  .day-ev .sub { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+  .day-ev .sub.memo {
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .empty { font-size: 13px; color: var(--text-3); text-align: center; padding: 16px 0; }
+
+  /* search result list */
+  .search-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .sr-item {
+    padding: 12px 14px; background: var(--surface); border-radius: 10px; cursor: pointer;
+  }
+  .sr-item:active { opacity: .8; }
+  .sr-line { font-size: 13px; line-height: 1.5; }
+  .sr-line .k { color: var(--text-3); font-weight: 700; }
+  .sr-date { color: var(--text-2); }
+  .sr-title { color: var(--text); font-weight: 700; font-size: 15px; margin: 2px 0; }
+  .sr-memo { color: var(--text-2); white-space: pre-wrap; word-break: break-word; }
+  .sr-hl { background: rgba(255,213,0,0.45); border-radius: 2px; padding: 0 1px; }
+  @media (prefers-color-scheme: dark) { .sr-hl { background: rgba(255,213,0,0.30); color: #fff; } }
+
+  label { display: block; font-size: 12px; color: var(--text); font-weight: 700; margin: 9px 0 4px; }
+  input[type=text], input[type=date], textarea {
+    width: 100%; border: 0.5px solid var(--line-strong); background: var(--bg); color: var(--text);
+    border-radius: 10px; padding: 9px 12px; font-size: 15px; font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 120px; }
+  .input-mic { position: relative; }
+  .input-mic input, .input-mic textarea { padding-right: 44px; }
+  .mic-btn {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border: none; background: var(--surface);
+    border-radius: 50%; cursor: pointer; line-height: 0; color: var(--text-2);
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .mic-btn.area { top: 8px; transform: none; }
+  .mic-btn:active { background: var(--line-strong); }
+  .mic-btn.listening { background: #e23b3b; color: #fff; animation: micpulse 1s ease-in-out infinite; }
+  @keyframes micpulse { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+
+  /* 검색 버튼(돋보기)은 항상 표시 */
+  .search-wrap input { padding-right: 44px; }
+
+  /* 백업 버튼 가로 2칸 배치 */
+  .backup-row { display: flex; gap: 10px; margin-top: 6px; }
+  .backup-row .btn { flex: 1; }
+  .types { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .type-chip {
+    border: 1px solid var(--line-strong); background: var(--bg); color: var(--text);
+    border-radius: 18px; padding: 7px 14px; font-size: 13px; font-family: inherit;
+    font-weight: 700; cursor: pointer;
+  }
+  .type-chip[data-t=work].sel { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+  .type-chip[data-t=important].sel { background:#2563a8; color:#fff; border-color:#2563a8; }
+  .type-chip[data-t=holiday].sel { background:#b6493b; color:#fff; border-color:#b6493b; }
+  .type-chip[data-t=personal].sel { background:#1d9e75; color:#fff; border-color:#1d9e75; }
+  .type-chip.chip-disabled { opacity: 0.35; pointer-events: none; }
+  #weekendHint { display: none; }
+  #weekendHint.show { display: block; }
+  .colors { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 6px; }
+  .colors .sw {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .colors .sw.sel { border-color: var(--text); }
+  .colors.disabled { opacity: 0.35; pointer-events: none; }
+  .colors-hint { font-size: 11px; color: var(--text-3); margin-top: 6px; display: none; }
+  .colors-hint.show { display: block; }
+  .sw[data-c="0"]{background:#ff8fa3;} .sw[data-c="1"]{background:#ffb56b;}
+  .sw[data-c="2"]{background:#ffe66d;} .sw[data-c="3"]{background:#8fe388;}
+  .sw[data-c="4"]{background:#5ad2f4;} .sw[data-c="5"]{background:#6c9bff;}
+  .sw[data-c="6"]{background:#b388ff;} .sw[data-c="7"]{background:#ff7ec7;}
+  .sw[data-c="8"]{background:#c0c0c8;}
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+  /* 단독으로 한 줄 꽉 채우는 버튼(로그아웃 등) — 폭/여백만 담당.
+     배경·글자색은 함께 붙는 .ghost/.primary 등이 결정한다. */
+  .btn.block {
+    display: block; width: 100%; flex: none; margin-top: 10px;
+  }
+  .set-row { font-size: 14px; color: var(--text-2); margin: 6px 0 12px; }
+  .set-hint { font-size: 12px; color: var(--text-3); margin-top: 12px; line-height: 1.5; }
+  .btn {
+    flex: 1; border: none; border-radius: 11px; padding: 13px; font-size: 15px;
+    font-family: inherit; cursor: pointer; font-weight: 500;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost { background: var(--surface); color: var(--text); }
+  .btn.danger { background: transparent; color: var(--sun); border: 0.5px solid var(--line-strong); }
+  .btn:active { opacity: .85; }
+
+  /* ===== 로그인 게이트 (3.0) =====
+     로그인 전에는 이 전체 화면 오버레이만 보이고, 로그인되면 숨긴다.
+     #app(캘린더)은 로그인 확인 전까지 가려 두어 깜빡임을 막는다. */
+  #authGate {
+    position: fixed; inset: 0; z-index: 100;
+    display: none;                 /* 기본 숨김 — 상태 확인 후 JS가 켠다 */
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px; padding: 32px;
+    background: var(--bg); color: var(--text); text-align: center;
+  }
+  #authGate.show { display: flex; }
+  #authGate .brand { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+  #authGate .tagline { font-size: 14px; color: var(--text-2); margin-top: -10px; }
+  .gsi-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 13px 22px; border-radius: 12px;
+    border: 0.5px solid var(--line-strong); background: var(--surface);
+    color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .gsi-btn:active { opacity: .85; }
+  .gsi-btn svg { width: 18px; height: 18px; }
+  #authGate .auth-hint { font-size: 12px; color: var(--text-3); max-width: 280px; line-height: 1.5; }
+  /* 인앱 브라우저 안내 — 기본 숨김, 감지되면 JS가 .show를 붙여 표시 */
+  .inapp-notice {
+    display: none; flex-direction: column; align-items: center; gap: 10px;
+    margin-top: 18px; padding: 16px 18px; max-width: 300px;
+    background: #fff; border: 1px solid #e2d8c8; border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+  .inapp-notice.show { display: flex; }
+  .inapp-text { font-size: 13px; color: #6b6256; line-height: 1.6; text-align: center; }
+  .inapp-btn {
+    width: 100%; background: #2f7d6e; color: #fff; border: none;
+    border-radius: 11px; padding: 12px; font-size: 15px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  .inapp-btn:active { opacity: .85; }
+  .inapp-copy {
+    background: transparent; border: none; color: #8a8578;
+    font-size: 13px; font-family: inherit; text-decoration: underline; cursor: pointer; padding: 2px;
+  }
+  .inapp-copy:active { opacity: .6; }
+
+  /* 시작 스플래시 — 앱 켜질 때 DinoPlan 로고를 잠깐 보여준다.
+     준비되면 .hide로 부드럽게 사라진다(최소 표시 시간은 JS가 보장). */
+  #authSplash {
+    position: fixed; inset: 0; z-index: 101;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--text);
+    opacity: 1; transition: opacity 0.4s ease;
+  }
+  #authSplash .splash-inner {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  #authSplash .splash-brand {
+    font-size: 30px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  #authSplash.hide { opacity: 0; pointer-events: none; }
+
+  /* [Rev611] 오프라인 안내 모달 — 공룡 그림 + 말풍선 + 확인 버튼.
+     네트워크가 없을 때 깔끔하게 안내하고, 확인을 누르면 그냥 닫힌다.
+     앱(Capacitor)으로 빌드해도 동일하게 동작하도록 웹 표준 요소만 사용. */
+  #offlineModal {
+    position: fixed; inset: 0; z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(44,44,42,0.45); padding: 24px;
+  }
+  #offlineModal.show { display: flex; }
+  #offlineModal .off-card {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    background: #e8dfc9; color: #2c2c2a;
+    border-radius: 20px; padding: 26px 22px 22px; max-width: 320px; width: 100%;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.22);
+    animation: dinoPop 0.4s ease-out;
+  }
+  #offlineModal .dino { width: 150px; }
+  /* 말풍선 — 공룡 아래, 꼬리는 위쪽을 향한다 */
+  #offlineModal .off-bubble {
+    position: relative; background: #fff; color: #4a443a;
+    border-radius: 14px; padding: 14px 16px; font-size: 14.5px;
+    line-height: 1.6; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  #offlineModal .off-bubble::before {
+    content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-bottom: 9px solid #fff;
+  }
+  #offlineModal .off-ok {
+    width: 100%; background: #2f7d6e; color: #fff; border: none;
+    border-radius: 12px; padding: 13px; font-size: 16px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  #offlineModal .off-ok:active { opacity: .85; }
+
+  /* [Rev610] 광고 배너 자리 — 헤더와 요일줄 사이.
+     기본은 숨김(웹/PC). 앱에서 광고가 켜질 때 JS가 .show를 붙여 표시하고,
+     프리미엄(광고 제거)이면 .premium이 붙어 다시 숨긴다. */
+  #adBar {
+    display: none;
+    align-items: center; justify-content: center;
+    height: 56px; background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  #adBar.show { display: flex; }
+  #adBar.premium { display: none !important; }
+  #adBar .ad-ph { font-size: 12px; color: var(--text-3); letter-spacing: 1px; }
+
+  /* 쿠폰 입력 줄 — 내보내기 버튼 줄과 비슷한 톤 */
+  .coupon-row { display: flex; gap: 10px; margin-top: 6px; }
+  .coupon-row input {
+    flex: 1; min-width: 0; padding: 11px 12px;
+    border: 1px solid var(--line); border-radius: 11px;
+    background: var(--bg); color: var(--text);
+    font-size: 15px; font-family: inherit; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .coupon-row .btn { flex: 0 0 auto; padding-left: 18px; padding-right: 18px; }
+  /* 프리미엄이면 쿠폰 입력 줄을 숨김(이미 적용됨) */
+  #couponRow.premium { display: none; }
+  /* 캐릭터(공룡) — 스플래시는 크게, 로그인 화면은 조금 작게.
+     켤 때 살짝 통통 튀는 느낌으로 등장. */
+  .dino { display: block; width: 132px; height: auto; }
+  #authSplash .dino { width: 230px; animation: dinoPop 0.5s ease-out; }
+  #authGate .dino { width: 190px; margin-bottom: 4px; animation: dinoPop 0.5s ease-out; }
+  @keyframes dinoPop {
+    0%   { opacity: 0; transform: scale(0.6) translateY(10px); }
+    70%  { transform: scale(1.06); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  /* 캐릭터 그림이 종이(크림색) 질감이라, 스플래시·로그인 배경도 같은 크림색으로
+     통일해 네모 경계가 보이지 않게 한다(다크모드에서도 동일). */
+  #authSplash, #authGate { background: #e8dfc9 !important; color: #2c2c2a !important; }
+  #authGate .brand { color: #2f7d6e !important; }
+  #authGate .auth-hint { color: #8a8578 !important; }
+
+  /* 로그인 확인 전에는 캘린더 본체를 가린다 (인증 후 .ready로 해제) */
+  #app { visibility: hidden; }
+  #app.ready { visibility: visible; }
+</style>
+
+<!-- ===== Firebase (인증 + 클라우드 동기화) =====
+     설계 개요 — 책임을 세 층으로 나눈다.
+       1) Firebase 초기화 : 앱/DB/Auth 인스턴스를 한 번만 만든다.
+       2) 인증 층 (Auth)  : "지금 누가 로그인했나"만 다룬다. 로그인 상태가
+                            바뀌면 본문에 알린다(window.onAuthChange).
+       3) 데이터 층 (Cloud): "그 사람의 일정 칸"을 읽고 쓴다. 어느 칸인지는
+                            로그인한 사용자(uid)로 정해진다.
+
+     데이터 모델 (개인 캘린더, 향후 팀/패밀리 확장 대비)
+       calendars/{uid}        ← 사용자별 개인 일정 문서 (이번 3.0의 핵심)
+       calendars/shared       ← 2.x 시절 공용 칸 (로그인 후 1회 '이사'에만 사용)
+
+     본문(앱 로직)이 알아야 할 것은 아래 4개뿐 — 내부 구현은 신경 쓸 필요 없다.
+       window.onAuthChange(user|null)  : 로그인 상태 변화 콜백 (본문이 구현)
+       window.authSignIn()             : 구글 로그인 시작
+       window.authSignOut()            : 로그아웃
+       window.cloudSave(events)        : 현재 사용자 칸에 저장
+       window.cloudListen()            : 현재 사용자 칸 실시간 수신 시작
+       window.onCloudData(events)      : 수신 콜백 (본문이 구현)
+     메모 동기화 (Rev606, 일정과 독립된 별도 필드)
+       window.cloudSaveMemo(memo, memoHist) : 메모 본문·이력 저장 (events 보존, merge)
+       window.cloudListenMemo()             : 메모 실시간 수신 시작
+       window.onCloudMemoData(memo, hist)   : 메모 수신 콜백 (본문이 구현)
+-->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential,
+    signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  /* ---- 1) Firebase 초기화 (schedit 프로젝트) ---- */
+  const firebaseConfig = {
+    apiKey: "AIzaSyBJg8UBUmw75m2_w5IGFUoEBSkY7II4xQ0",
+    authDomain: "schedit-1999e.firebaseapp.com",
+    projectId: "schedit-1999e",
+    storageBucket: "schedit-1999e.firebasestorage.app",
+    messagingSenderId: "650966539543",
+    appId: "1:650966539543:web:726d071d4dd259bd5f6b52"
+  };
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  /* ---- 2) 인증 층 ----
+     현재 로그인한 사용자를 한 곳(currentUser)에서만 관리한다.
+     상태가 바뀔 때마다 본문에 통보하여, 본문이 로그인 화면/캘린더를
+     전환하고 동기화를 시작/중단하도록 한다. */
+  let currentUser = null;
+
+  const provider = new GoogleAuthProvider();
+
+  /* ---- 플랫폼 판별 ----
+     Capacitor 앱(WebView)인지 일반 웹브라우저인지 구분한다.
+     앱(WebView)에서는 웹 OAuth 리다이렉트/팝업이 sessionStorage 분리 때문에
+     "missing initial state"로 깨지므로, 네이티브 구글 로그인 플러그인
+     (@capacitor-firebase/authentication)을 써서 토큰을 받은 뒤
+     Firebase JS SDK에 signInWithCredential로 연결한다.
+     웹에서는 기존 signInWithPopup 그대로 사용. */
+  function isNativeApp() {
+    return !!(window.Capacitor &&
+              typeof window.Capacitor.isNativePlatform === 'function' &&
+              window.Capacitor.isNativePlatform());
+  }
+
+  // 앱: 네이티브 구글 로그인 → idToken으로 Firebase 자격증명 만들기
+  async function signInNative() {
+    // @capacitor-firebase/authentication 플러그인 핸들
+    const FA = window.Capacitor?.Plugins?.FirebaseAuthentication;
+    if (!FA) {
+      throw new Error('FirebaseAuthentication 플러그인이 없습니다. ' +
+        '`npm i @capacitor-firebase/authentication` 후 npx cap sync 하세요.');
+    }
+    // 네이티브 구글 계정 선택 → idToken 획득
+    const result = await FA.signInWithGoogle();
+    const idToken =
+      result?.credential?.idToken || result?.idToken || null;
+    if (!idToken) throw new Error('구글 idToken을 받지 못했습니다.');
+    // 받은 idToken으로 Firebase JS SDK 로그인 (currentUser/onAuthStateChanged 동일하게 동작)
+    const cred = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, cred);
+  }
+
+  window.authSignIn = async function() {
+    try {
+      if (isNativeApp()) {
+        await signInNative();           // 앱(Capacitor WebView)
+      } else {
+        await signInWithPopup(auth, provider);   // 일반 웹브라우저
+      }
+    } catch (e) {
+      console.warn('로그인 실패:', e);
+      if (typeof window.onAuthError === 'function') window.onAuthError(e);
+    }
+  };
+
+  window.authSignOut = async function() {
+    try {
+      // 앱: 네이티브 구글 세션도 함께 정리 (안 하면 다음 로그인 때 계정 선택이 안 뜸)
+      if (isNativeApp()) {
+        const FA = window.Capacitor?.Plugins?.FirebaseAuthentication;
+        if (FA) { try { await FA.signOut(); } catch (e) { console.warn('네이티브 로그아웃 실패:', e); } }
+      }
+      await signOut(auth);
+    }
+    catch (e) { console.warn('로그아웃 실패:', e); }
+  };
+
+  // 로그인/로그아웃이 감지되면 currentUser를 갱신하고 본문에 알린다.
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user || null;
+    if (typeof window.onAuthChange === 'function') {
+      window.onAuthChange(currentUser);
+    }
+  });
+
+  /* ---- 3) 데이터 층 ----
+     "현재 사용자의 일정 문서"를 그때그때 만들어 쓴다. 고정 참조(shared)를
+     없애고 uid 기준으로 바꾼 것이 3.0의 핵심. 팀/패밀리에서 남의 문서를
+     볼 때도 userDocRef(다른uid) 형태로 재사용할 수 있다. */
+  function userDocRef(uid) {
+    return doc(db, 'calendars', uid);
+  }
+
+  // 방금 내가 올린 내용인지 기억 (메아리 방지)
+  let _lastPushedJson = null;
+  // 현재 켜져 있는 실시간 구독을 해제하는 함수 (계정 전환 시 정리용)
+  let _unsubscribe = null;
+
+  // 현재 사용자 칸에 일정 전체를 통째로 저장 (save에서 호출)
+  window.cloudSave = async function(events) {
+    if (!currentUser) return;            // 로그인 전에는 클라우드에 쓰지 않음
+    try {
+      _lastPushedJson = JSON.stringify(events);
+      await setDoc(userDocRef(currentUser.uid), { events, at: Date.now() });
+    } catch (e) {
+      console.warn('cloudSave 실패:', e);
+    }
+  };
+
+  // 현재 사용자 칸의 변화를 실시간으로 받아 화면에 반영
+  window.cloudListen = function() {
+    if (!currentUser) return;
+    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }  // 이전 구독 정리
+
+    _unsubscribe = onSnapshot(userDocRef(currentUser.uid), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const incoming = Array.isArray(data.events) ? data.events : [];
+      // 방금 내가 올린 것이 메아리쳐 돌아온 경우는 무시 (화면 깜빡임 방지)
+      if (JSON.stringify(incoming) === _lastPushedJson) return;
+      if (typeof window.onCloudData === 'function') {
+        window.onCloudData(incoming);
+      }
+    }, (err) => {
+      console.warn('cloudListen 오류:', err);
+    });
+  };
+
+  // 실시간 수신 중단 (로그아웃 시 본문에서 호출)
+  window.cloudStop = function() {
+    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+    if (_unsubMemo) { _unsubMemo(); _unsubMemo = null; }
+    _cloudMemoLoaded = false;   // [Rev610] 계정 전환 대비: 다음 로그인도 '받기 먼저'부터
+  };
+
+  /* ---- 3-b) 메모 동기화 (Rev606, B방식: 일정과 독립) ----
+     일정(events)과 같은 사용자 문서(calendars/{uid})에 '나란히' 별도 필드로
+     저장한다. 일정 로직(cloudSave/cloudListen/onCloudData)은 전혀 건드리지 않고,
+     메모 본문(memo)·이력(memoHist)만 따로 읽고 쓴다. merge:true로 저장하므로
+     events 필드는 보존된다. 어느 한쪽이 깨져도 다른 쪽에 영향 없음. */
+  let _lastPushedMemoJson = null;   // 메아리 방지(메모 전용)
+  let _unsubMemo = null;            // 메모 구독 해제 함수
+  let _cloudMemoLoaded = false;     // [Rev610] 클라우드 메모를 한 번이라도 받았는가
+                                    // (받기 전엔 빈 메모를 절대 올리지 않음 — 첫 로그인 덮어쓰기 방지)
+
+  // 메모 본문/이력을 내 칸에 저장 (events는 손대지 않음 — merge)
+  window.cloudSaveMemo = async function(memo, memoHist) {
+    if (!currentUser) return;
+    // [Rev610] 입구 잠그기: 클라우드를 아직 한 번도 못 받았으면 저장 보류.
+    // "읽기 먼저, 쓰기 나중" — 새 기기 첫 로그인 때 빈 메모가 기존 데이터를 덮는 사고 차단.
+    if (!_cloudMemoLoaded) return;
+    try {
+      const payload = { memo, memoHist, memoAt: Date.now() };
+      _lastPushedMemoJson = JSON.stringify({ memo, memoHist });
+      await setDoc(userDocRef(currentUser.uid), payload, { merge: true });
+    } catch (e) {
+      console.warn('cloudSaveMemo 실패:', e);
+    }
+  };
+
+  // [Rev612] 메모 본문을 클라우드에서 1회만 읽어 반환한다(구독 아님).
+  // openMemo에서 memoText가 비어 있을 때의 안전망으로만 쓴다.
+  // 성공: 문자열(빈 문자열 포함) 반환 / 실패·미로그인: null 반환(호출측이 기존값 유지).
+  window.cloudReadMemoOnce = async function() {
+    if (!currentUser) return null;
+    try {
+      const snap = await getDoc(userDocRef(currentUser.uid));
+      if (!snap.exists()) return '';            // 문서 자체가 없으면 빈값이 맞음
+      const v = snap.data().memo;
+      return (typeof v === 'string') ? v : '';  // memo 필드 없으면 빈값 인정
+    } catch (e) {
+      console.warn('cloudReadMemoOnce 실패:', e);
+      return null;                              // 실패는 null — 호출측이 덮어쓰지 않게
+    }
+  };
+  // 쿠폰이 적용되면 본문에서 호출한다. 다른 기기도 메모 리스너로 즉시 받는다.
+  window.cloudSavePremium = async function(isPremium) {
+    if (!currentUser) return;
+    try {
+      await setDoc(userDocRef(currentUser.uid), { premium: isPremium === true }, { merge: true });
+    } catch (e) {
+      console.warn('cloudSavePremium 실패:', e);
+    }
+  };
+
+  // 내 칸의 메모 변화를 실시간 수신 (events 구독과 별개)
+  window.cloudListenMemo = function() {
+    if (!currentUser) return;
+    if (_unsubMemo) { _unsubMemo(); _unsubMemo = null; }
+    _unsubMemo = onSnapshot(userDocRef(currentUser.uid), (snap) => {
+      // [Rev610] 스냅샷이 도착했다 = 클라우드를 봤다. 문서가 없어도(신규 가입자)
+      // "봤다"는 유효한 수신이므로 여기서 쓰기 잠금을 푼다. 이후의 빈 메모는
+      // '동기화된 빈값'(진짜 비어있음)이므로 정상적으로 올라가도 된다.
+      _cloudMemoLoaded = true;
+      if (!snap.exists()) return;
+      const data = snap.data();
+      // [Rev610] 프리미엄(광고 제거) 상태도 같은 문서에 얹혀 오므로 함께 처리.
+      // 메모 유무와 무관하게 먼저 본다.
+      if (typeof data.premium !== 'undefined' && typeof window.onCloudPremium === 'function') {
+        window.onCloudPremium(data.premium === true);
+      }
+      // 메모 필드가 아직 없는 사용자는 무시(기존 일정만 있는 문서 대비)
+      if (typeof data.memo === 'undefined' && typeof data.memoHist === 'undefined') return;
+      const memo = typeof data.memo === 'string' ? data.memo : '';
+      const memoHist = Array.isArray(data.memoHist) ? data.memoHist : [];
+      // 방금 내가 올린 것이 메아리쳐 온 경우 무시
+      if (JSON.stringify({ memo, memoHist }) === _lastPushedMemoJson) return;
+      if (typeof window.onCloudMemoData === 'function') {
+        window.onCloudMemoData(memo, memoHist);
+      }
+    }, (err) => {
+      console.warn('cloudListenMemo 오류:', err);
+    });
+  };
+
+  /* ---- 데이터 '이사' (2.x → 3.0 1회 전환) ----
+     로그인 후, 내 개인 칸이 비어 있고 옛 shared 칸에 일정이 남아 있으면
+     그 일정을 내 칸으로 한 번만 복사한다. 이미 내 칸에 데이터가 있으면
+     아무것도 하지 않는다. 복사된 일정 배열을 반환(없으면 null). */
+  window.cloudMigrateFromShared = async function() {
+    if (!currentUser) return null;
+    try {
+      const mineSnap = await getDoc(userDocRef(currentUser.uid));
+      const mineHasData =
+        mineSnap.exists() &&
+        Array.isArray(mineSnap.data().events) &&
+        mineSnap.data().events.length > 0;
+      if (mineHasData) return null;      // 이미 내 일정이 있으면 이사 불필요
+
+      const sharedSnap = await getDoc(doc(db, 'calendars', 'shared'));
+      const sharedEvents =
+        sharedSnap.exists() && Array.isArray(sharedSnap.data().events)
+          ? sharedSnap.data().events : [];
+      if (sharedEvents.length === 0) return null;   // 옮길 것이 없음
+
+      // 내 칸으로 복사 (shared 원본은 보존 — 안전하게 남겨둔다)
+      _lastPushedJson = JSON.stringify(sharedEvents);
+      await setDoc(userDocRef(currentUser.uid), { events: sharedEvents, at: Date.now() });
+      return sharedEvents;
+    } catch (e) {
+      console.warn('이사 실패:', e);
+      return null;
+    }
+  };
+
+  // 본문이 "연결 준비됨"을 기다릴 수 있게 신호
+  window.cloudReady = true;
+  document.dispatchEvent(new Event('cloud-ready'));
+</script>
+<!-- ===== /Firebase ===== -->
+
+</head>
+<body>
+
+<!-- ===== 로그인 게이트 (3.0) =====
+     authSplash : 로그인 상태를 확인하는 찰나에 잠깐 보이는 화면
+     authGate   : 로그인 안 된 사용자에게 보이는 구글 로그인 화면 -->
+<div id="authSplash">
+  <div class="splash-inner">
+    <img class="dino" src="character.png" alt="DinoPlan" />
+    <div class="splash-brand">DinoPlan</div>
+  </div>
+</div>
+
+<div id="authGate">
+  <img class="dino" src="character.png" alt="DinoPlan" />
+  <div class="brand">DinoPlan</div>
+  <button type="button" class="gsi-btn" id="googleSignInBtn">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+    Google로 로그인
+  </button>
+  <div class="auth-hint">로그인하면 내 일정이 기기 간에 안전하게 동기화됩니다.</div>
+
+  <!-- 인앱 브라우저(카톡·인스타 등)에서 열렸을 때만 표시. 일반 브라우저에선 숨김. -->
+  <div id="inappNotice" class="inapp-notice">
+    <div class="inapp-text">카카오톡 등 앱 안에서 열면 구글 로그인이 막혀요.<br>아래 버튼으로 브라우저에서 열어 주세요.</div>
+    <button type="button" class="inapp-btn" id="openBrowserBtn">브라우저로 열기</button>
+    <button type="button" class="inapp-copy" id="copyUrlBtn">주소 복사</button>
+  </div>
+</div>
+
+<!-- [Rev611] 오프라인 안내 모달 — 공룡 그림 + 말풍선 + 확인 -->
+<div id="offlineModal">
+  <div class="off-card">
+    <img class="dino" src="character.png" alt="DinoPlan" />
+    <div class="off-bubble">인터넷에 연결되어 있지 않아요.<br>네트워크 상태를 확인해 주세요.</div>
+    <button type="button" class="off-ok" id="offlineOkBtn">확인</button>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <button class="title-btn" id="titleBtn">
+      <span id="ymLabel"></span><span class="caret">▾</span>
+    </button>
+    <div class="head-actions">
+      <button class="head-btn" id="workToggle" aria-label="업무일정 표시 전환" title="업무일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      </button>
+      <button class="head-btn" id="importantToggle" aria-label="중요일정 표시 전환" title="중요일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+      </button>
+      <button class="head-btn" id="personalToggle" aria-label="개인일정 표시 전환" title="개인일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+      <button class="head-btn" id="holidayToggle" aria-label="공휴일·휴일일정 표시 전환" title="공휴일·휴일일정 표시/숨김">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="16" cy="16" r="2.5" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="head-btn" id="addBtn" aria-label="새 일정 추가" title="새 일정">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="head-btn" id="settingsBtn" aria-label="설정"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="head-btn" id="memoBtn" aria-label="메모장" title="메모장">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+      </button>
+  </header>
+  <!-- [Rev610] 광고 배너 자리 — 앱(Capacitor)일 때만 실제 AdMob 배너가 들어온다.
+       프리미엄(광고 제거)이면 .premium 클래스가 붙어 숨겨진다. 웹/PC에서는
+       기본 숨김(placeholder는 개발 확인용으로만 잠깐 보일 수 있음). -->
+  <div id="adBar" aria-hidden="true"><span class="ad-ph">광고 영역</span></div>
+  <div class="dow">
+    <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="we"><span class="wsat">토</span><span class="wslash"> / </span><span class="wsun">일</span><span class="corner" id="cornerDates"></span></span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ===== To-Do 메모장 패널 (오른쪽에서 슬라이드 인) ===== -->
+<div id="memoPanel">
+  <div class="memo-bar">
+    <button type="button" class="memo-bar-btn" id="memoBack" aria-label="달력으로">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>달력</span>
+    </button>
+    <span class="memo-today" id="memoToday"></span>
+    <button type="button" class="memo-bar-btn icon-only" id="memoHistoryBtn" aria-label="수정 이력">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 15 14"/></svg>
+    </button>
+  </div>
+  <div class="memo-body" id="memoBody">
+    <textarea id="memoText" placeholder="메모를 입력하세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></textarea>
+  </div>
+</div>
+
+<!-- ===== 메모 수정 이력 (전체 큰 창) ===== -->
+<div id="memoHistory">
+  <div class="mh-head"><h2>메모 수정 이력</h2></div>
+  <div class="mh-list" id="memoHistoryList"></div>
+  <div class="mh-foot">
+    <button type="button" class="btn primary" id="memoHistoryClose">닫기</button>
+  </div>
+</div>
+
+<!-- year/month picker -->
+<div class="scrim" id="pickerScrim"></div>
+<div class="picker" id="picker">
+  <div class="grab"></div>
+  <div class="picker-cols">
+    <div class="picker-col" id="yearCol"></div>
+    <div class="picker-col" id="monthCol"></div>
+  </div>
+</div>
+
+<!-- settings / backup sheet (scrim 뒤로 이동됨) -->
+
+<div class="scrim" id="scrim"></div>
+
+<!-- settings / backup sheet -->
+<div class="sheet" id="settingsSheet">
+  <div class="grab"></div>
+  <h2>설정 · 백업</h2>
+  <div class="set-row"><span id="evCount">일정 0개</span></div>
+  <label>일정 검색</label>
+  <div class="input-mic search-wrap">
+    <input type="text" id="searchInput" placeholder="제목·내용에서 검색 (예: tel)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" enterkeyhint="search" />
+    <button type="button" class="mic-btn search-go" id="searchBtn" aria-label="검색"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+  </div>
+  <label>데이터 백업</label>
+  <div class="backup-row">
+    <button class="btn ghost" id="exportBtn">내보내기</button>
+    <button class="btn ghost" id="importBtn">가져오기</button>
+  </div>
+  <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
+  <div class="set-hint" id="backupInfo"></div>
+
+  <label>광고 제거</label>
+  <div class="set-row"><span id="premiumStatus">광고가 표시됩니다</span></div>
+  <div class="coupon-row" id="couponRow">
+    <input type="text" id="couponInput" placeholder="쿠폰 코드 8자리" maxlength="8"
+           autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+           data-form-type="other" data-lpignore="true" data-1p-ignore="true" />
+    <button type="button" class="btn ghost" id="couponBtn">적용</button>
+  </div>
+  <div class="set-hint" id="couponHint"></div>
+
+  <label>계정</label>
+  <div class="set-row"><span id="accountEmail">—</span></div>
+  <button class="btn ghost block" id="signOutBtn">로그아웃</button>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.613</div>
+</div>
+
+<!-- search result sheet -->
+<div class="sheet" id="searchSheet">
+  <div class="grab"></div>
+  <h2 id="searchTitle">검색 결과</h2>
+  <div class="search-list" id="searchList"></div>
+  <div class="actions">
+    <button class="btn primary" id="closeSearch">닫기</button>
+  </div>
+</div>
+
+<!-- day sheet -->
+<div class="sheet" id="daySheet">
+  <div class="grab"></div>
+  <h2 id="dayTitle"></h2>
+  <div class="day-list" id="dayList"></div>
+  <div class="actions">
+    <button class="btn primary" id="addOnDay">이 날 일정 추가</button>
+  </div>
+</div>
+
+<!-- edit sheet -->
+<div class="sheet" id="editSheet">
+  <div class="grab"></div>
+  <div class="edit-head">
+    <h2 id="editTitle">새 일정</h2>
+    <button type="button" class="back-btn" id="backToSearch" aria-label="검색 결과로">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>검색</span>
+    </button>
+  </div>
+  <label>제목</label>
+  <div class="input-mic">
+    <input type="text" id="fTitle" placeholder="예: 납품 점검" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" />
+    <button type="button" class="mic-btn" id="micTitle" data-target="fTitle" aria-label="음성 입력"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+  </div>
+  <div class="row2">
+    <div><label>시작일</label><input type="date" id="fStart" /></div>
+    <div><label>종료일</label><input type="date" id="fEnd" /></div>
+  </div>
+  <label>메모 (선택)</label>
+  <div class="input-mic">
+    <textarea id="fMemo" placeholder="세부 내용" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></textarea>
+    <button type="button" class="mic-btn area" id="micMemo" data-target="fMemo" aria-label="음성 입력"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+  </div>
+  <label>종류</label>
+  <div class="types" id="types">
+    <button type="button" class="type-chip sel" data-t="work">업무</button>
+    <button type="button" class="type-chip" data-t="important">중요일정</button>
+    <button type="button" class="type-chip" data-t="personal">개인일정</button>
+    <button type="button" class="type-chip" data-t="holiday">휴일일정</button>
+  </div>
+  <div class="colors-hint" id="weekendHint">주말에는 업무 일정을 설정할 수 없습니다</div>
+  <label>배경색</label>
+  <div class="colors" id="colors">
+    <div class="sw sel" data-c="0"></div>
+    <div class="sw" data-c="1"></div>
+    <div class="sw" data-c="2"></div>
+    <div class="sw" data-c="3"></div>
+    <div class="sw" data-c="4"></div>
+    <div class="sw" data-c="5"></div>
+    <div class="sw" data-c="6"></div>
+    <div class="sw" data-c="7"></div>
+    <div class="sw" data-c="8"></div>
+  </div>
+  <div class="colors-hint" id="colorsHint">하루 일정은 배경색이 적용되지 않습니다</div>
+  <div class="actions">
+    <button class="btn ghost" id="cancelEdit">취소</button>
+    <button class="btn primary" id="saveEdit">저장</button>
+  </div>
+  <div class="actions" id="deleteRow" style="display:none; margin-top:10px;">
+    <button class="btn danger" id="deleteEvent">이 일정 삭제</button>
+  </div>
+</div>
+
+<script>
+const STORE = 'workcal.events.v1';
+const MS = 86400000;
+let events = load();
+let view = new Date(); view.setDate(1);
+let selectedType = 'work';
+let selectedBg = 0;
+let editingId = null;
+let lastSelectedDate = null;
+let lastSearchQuery = '';   // 마지막 검색어 (뒤로가기로 목록 복원용)
+let cameFromSearch = false; // 수정 화면이 검색을 거쳐 열렸는지
+let searchFromSettings = false; // 검색을 설정 시트에서 시작했는지(검색 종료 시 설정으로 복귀할지 판단)
+let _navActive = false;     // 검색 목록이 history에 한 단계 쌓여 있는지
+let showWork = (localStorage.getItem('workcal.showWork') !== 'off');         // 업무일정 달력 표시 여부(기본 표시)
+let showImportant = (localStorage.getItem('workcal.showImportant') !== 'off'); // 중요일정 달력 표시 여부(기본 표시)
+let showPersonal = (localStorage.getItem('workcal.showPersonal') !== 'off'); // 개인일정 달력 표시 여부(기본 표시)
+let showHoliday = (localStorage.getItem('workcal.showHoliday') !== 'off');   // 공휴일+휴일일정 표시 여부(기본 표시)
+// 달력에 이 일정을 표시할지 — 업무/중요/개인/휴일일정 토글을 함께 반영
+function isVisibleType(e) {
+  if (!showWork && (e.type === 'work' || !e.type)) return false;
+  if (!showImportant && e.type === 'important') return false;
+  if (!showPersonal && e.type === 'personal') return false;
+  if (!showHoliday && e.type === 'holiday') return false;
+  return true;
+}
+
+const $ = id => document.getElementById(id);
+
+// simple toast popup (reused for backup + voice messages)
+let _toastEl = null, _toastTimer = null;
+function showToast(text) {
+  if (!_toastEl) {
+    _toastEl = document.createElement('div');
+    _toastEl.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:#333;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:60;max-width:84%;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.25);';
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = text;
+  _toastEl.style.display = 'block';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { if (_toastEl) _toastEl.style.display = 'none'; }, 2500);
+}
+
+// [Rev611] 오프라인 안내 모달 — 공룡 그림 + 말풍선. 확인을 누르면 그냥 닫는다.
+function showOfflineModal() {
+  const m = $('offlineModal');
+  if (m) m.classList.add('show');
+}
+function hideOfflineModal() {
+  const m = $('offlineModal');
+  if (m) m.classList.remove('show');
+}
+
+/* ===== [Rev610] 광고 · 쿠폰(광고 제거) · 프리미엄 =====
+   · 광고 배너: 앱(Capacitor)일 때만, 그리고 프리미엄이 아닐 때만 표시.
+     실제 AdMob 배너 연결은 앱 빌드 단계에서 이 #adBar 안에 붙인다(연결 다리).
+   · 마스터 쿠폰: 코드 원문은 앱에 없고 SHA-256 해시만 둔다. 입력값을 해시해
+     비교하므로 소스를 뜯어도 코드가 안 보인다. (1회용 코드는 나중에 Firestore로)
+   · 프리미엄 상태: 로컬(기기 기억) + 클라우드(calendars/{uid}.premium, 기기 간 동기화). */
+
+const PREMIUM_KEY = 'workcal.premium.v1';
+// 마스터 쿠폰의 SHA-256 해시 (코드 원문은 앱에 저장하지 않음)
+const MASTER_COUPON_HASH = 'f2e44079a4532674dbcd36edf3e672d143ac4857139846608cf7dba1bf0b24ff';
+
+let isPremium = false;
+// 앱(Capacitor) 환경인지 — 앱일 때만 배너를 띄운다. 웹/PC에서는 광고 없음.
+function isAppEnv() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+// 입력 문자열의 SHA-256 16진 해시
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// 배너 표시 갱신 — 앱이고 프리미엄 아닐 때만 보인다.
+function refreshAdBar() {
+  const bar = $('adBar');
+  if (bar) {
+    bar.classList.toggle('premium', isPremium);
+    // 웹/PC에서는 placeholder도 항상 숨김 (앱에서는 네이티브 배너가 따로 뜸)
+    bar.classList.remove('show');
+  }
+  // 앱이고 프리미엄이 아닐 때만 네이티브 AdMob 배너 표시
+  if (isAppEnv() && !isPremium) showAdMobBanner();
+  else hideAdMobBanner();
+}
+
+// ===== [AdMob] 네이티브 배너 (검증 단계: 구글 테스트 ID) =====
+// 실제 광고단위 ID(.../8709130614)는 출시 직전에만 교체한다.
+let _adMobShown = false;
+let _adMobInit = false;
+function _admob() {
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) || null;
+}
+async function showAdMobBanner() {
+  const AdMob = _admob();
+  if (!AdMob || _adMobShown) return;
+  try {
+    if (!_adMobInit) { await AdMob.initialize({}); _adMobInit = true; }
+    await AdMob.showBanner({
+      // 구글 공식 테스트 배너 ID (실광고 ID는 출시 직전 교체)
+      adId: 'ca-app-pub-3940256099942544/6300978111',
+      adSize: 'ADAPTIVE_BANNER',
+      position: 'BOTTOM_CENTER',
+      isTesting: true
+    });
+    _adMobShown = true;
+  } catch (e) {
+    console.error('AdMob showBanner error', e);
+  }
+}
+async function hideAdMobBanner() {
+  const AdMob = _admob();
+  if (!AdMob || !_adMobShown) return;
+  try {
+    await AdMob.hideBanner();
+    await AdMob.removeBanner();
+    _adMobShown = false;
+  } catch (e) {
+    console.error('AdMob hideBanner error', e);
+  }
+}
+
+// 설정 화면의 프리미엄 안내·쿠폰칸 갱신
+function refreshPremiumUI() {
+  const st = $('premiumStatus');
+  if (st) st.textContent = isPremium ? '광고가 제거되었습니다 ✓' : '광고가 표시됩니다';
+  const row = $('couponRow');
+  if (row) row.classList.toggle('premium', isPremium);
+}
+
+// 프리미엄 상태를 적용(로컬 저장 + 화면 갱신). push=true면 클라우드에도 올린다.
+function applyPremium(on, push) {
+  isPremium = (on === true);
+  try { localStorage.setItem(PREMIUM_KEY, isPremium ? '1' : '0'); } catch(e) {}
+  refreshAdBar();
+  refreshPremiumUI();
+  if (push && window.cloudReady && typeof window.cloudSavePremium === 'function') {
+    window.cloudSavePremium(isPremium);
+  }
+}
+
+// 클라우드에서 프리미엄 상태가 도착했을 때 (다른 기기에서 쿠폰 적용 등)
+window.onCloudPremium = function(on) {
+  // 한 번 프리미엄이 됐으면 유지(클라우드가 false로 와도 끄지 않음 — 안전).
+  if (on === true && !isPremium) applyPremium(true, false);
+};
+
+// 쿠폰 적용 버튼
+async function applyCoupon() {
+  const input = $('couponInput');
+  const hint = $('couponHint');
+  if (!input) return;
+  const code = (input.value || '').trim().toUpperCase();
+  if (!code) { if (hint) hint.textContent = '쿠폰 코드를 입력해 주세요.'; return; }
+  try {
+    const h = await sha256Hex(code);
+    if (h === MASTER_COUPON_HASH) {
+      applyPremium(true, true);             // 로컬+클라우드 모두 반영
+      input.value = '';
+      if (hint) hint.textContent = '쿠폰이 적용되어 광고가 제거되었습니다.';
+      showToast('광고가 제거되었습니다 ✓');
+    } else {
+      if (hint) hint.textContent = '유효하지 않은 쿠폰입니다.';
+    }
+  } catch(e) {
+    if (hint) hint.textContent = '쿠폰 확인 중 오류가 났어요. 잠시 후 다시 시도해 주세요.';
+  }
+}
+
+// 앱 시작 시 로컬에 기억된 프리미엄 상태를 먼저 반영(클라우드는 로그인 후 따라옴)
+function initPremium() {
+  try { isPremium = (localStorage.getItem(PREMIUM_KEY) === '1'); } catch(e) { isPremium = false; }
+  refreshAdBar();
+  refreshPremiumUI();
+}
+/* ===== /광고 · 쿠폰 · 프리미엄 ===== */
+const pad = n => String(n).padStart(2,'0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+
+/* ===== To-Do 메모장 (로컬 저장) ===== */
+const MEMO_KEY = 'workcal.memo.v1';        // 현재 메모 본문
+const MEMO_HIST_KEY = 'workcal.memoHist.v1'; // 수정 이력 배열 [{at, text}]
+let memoText = '';
+let memoHistory = [];
+let _memoOpenSnapshot = '';   // 메모장 열 때의 내용(닫을 때 변경 여부 비교용)
+
+function loadMemo() {
+  try { memoText = localStorage.getItem(MEMO_KEY) || ''; } catch(e) { memoText = ''; }
+  try { memoHistory = JSON.parse(localStorage.getItem(MEMO_HIST_KEY) || '[]'); }
+  catch(e) { memoHistory = []; }
+  if (!Array.isArray(memoHistory)) memoHistory = [];
+}
+function saveMemoBody() {
+  try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+  // 클라우드에도 올리기 — 폰 저장은 그대로 두고 추가만 (일정과 독립)
+  if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+    window.cloudSaveMemo(memoText, memoHistory);
+  }
+}
+function saveMemoHistory() {
+  try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {}
+  if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+    window.cloudSaveMemo(memoText, memoHistory);
+  }
+}
+// 'YYYY.MM.DD HH:MM' 표시
+function fmtWhen(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '.' + pad(d.getMonth()+1) + '.' + pad(d.getDate())
+    + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+async function openMemo() {
+  const ta = $('memoText');
+
+  // [Rev612 메모 임시 방어]
+  // 화면을 띄우기 "전에" 처리한다. memoText가 비어 있을 때만 클라우드를 1회 읽어 채운다.
+  // - 값이 오면(빈값 포함) memoText에 반영하고 끝(재시도/대기 없음 — 함정 회피).
+  // - 읽기 실패(null)면 기존 memoText 유지(클라우드는 건드리지 않음).
+  if (!memoText) {
+    try {
+      if (typeof window.cloudReadMemoOnce === 'function') {
+        const cloud = await window.cloudReadMemoOnce();
+        if (typeof cloud === 'string') memoText = cloud;   // null이면 유지
+      }
+    } catch (e) { /* 무시: 기존 memoText 유지 */ }
+  }
+
+  // 단일 루트: 화면은 항상 memoText를 뿌리고, 스냅샷도 그 값으로 잡는다.
+  ta.value = memoText;
+  _memoOpenSnapshot = memoText;   // 닫을 때 변경판정 기준(채운 값 기준이어야 안전)
+
+  // 상단 가운데 오늘 날짜·요일
+  const wd = ['일','월','화','수','목','금','토'];
+  const td = new Date();
+  $('memoToday').textContent = (td.getMonth()+1) + '월 ' + td.getDate() + '일 (' + wd[td.getDay()] + ')';
+
+  // 채우기가 끝난 "뒤에" 화면을 띄운다 (빈 화면이 잠깐 보이는 일 없음)
+  $('memoPanel').classList.add('open');
+  lockBack();
+  pushNav();
+}
+function closeMemo() {
+  const ta = $('memoText');
+  const now = ta.value;
+  // 변경 여부를 먼저 판정 (저장/푸시 이전에)
+  const changed = (now !== _memoOpenSnapshot);
+  memoText = now;
+  // 변경됐으면 이력 스냅샷 1개를 먼저 쌓고
+  if (changed) {
+    memoHistory.unshift({ at: Date.now(), text: now });
+    if (memoHistory.length > 500) memoHistory.length = 500;
+  }
+  // 로컬 저장 (본문·이력)
+  try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+  if (changed) { try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {} }
+  // 클라우드에는 본문+이력을 '함께' 한 번만 올린다 (메아리가 이력을 지우지 않도록)
+  if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+    window.cloudSaveMemo(memoText, memoHistory);
+  }
+  _memoOpenSnapshot = now;   // 닫은 뒤 스냅샷 동기화
+  $('memoPanel').classList.remove('open');
+  // 키보드 내려가도록 포커스 해제
+  ta.blur();
+  if (!document.querySelector('.sheet.open, .picker.open, #memoHistory.open')) unlockBack();
+  if (_navActive) { _navActive = false; history.back(); }
+}
+function openMemoHistory() {
+  const wrap = $('memoHistoryList');
+  wrap.innerHTML = '';
+  if (!memoHistory.length) {
+    wrap.innerHTML = '<div class="mh-empty">아직 저장된 수정 이력이 없습니다</div>';
+  } else {
+    memoHistory.forEach(h => {
+      const it = document.createElement('div');
+      it.className = 'mh-item';
+      const when = document.createElement('div');
+      when.className = 'mh-when';
+      when.textContent = fmtWhen(h.at);
+      const body = document.createElement('div');
+      body.className = 'mh-body';
+      body.textContent = h.text || '(빈 메모)';
+      it.appendChild(when); it.appendChild(body);
+      wrap.appendChild(it);
+    });
+  }
+  $('memoHistory').classList.add('open');
+}
+function closeMemoHistory() {
+  $('memoHistory').classList.remove('open');
+}
+
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || []; }
+  catch(e) { return []; }
+}
+function save() {
+  const json = JSON.stringify(events);
+  localStorage.setItem(STORE, json);
+  // auto backup: overwrite a single latest snapshot (on-device)
+  try {
+    localStorage.setItem(STORE + '.backup', JSON.stringify({ at: Date.now(), events }));
+  } catch(e) {}
+  // 클라우드에도 올리기 — 폰 저장은 그대로 두고 추가만
+  if (window.cloudReady && typeof window.cloudSave === 'function') {
+    window.cloudSave(events);
+  }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+const KMONTH = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const KDOW = ['일','월','화','수','목','금','토'];
+
+// 2026 대한민국 공휴일 (정부 월력요항 기준). key: 'M-D'
+const HOLIDAYS = {
+  '1-1': '신정',
+  '2-16': '설날연휴', '2-17': '설날', '2-18': '설날연휴',
+  '3-1': '삼일절', '3-2': '대체공휴일',
+  '5-5': '어린이날',
+  '5-24': '부처님오신날', '5-25': '대체공휴일',
+  '6-3': '지방선거', '6-6': '현충일',
+  '8-15': '광복절', '8-17': '대체공휴일',
+  '9-24': '추석연휴', '9-25': '추석', '9-26': '추석연휴',
+  '10-3': '개천절', '10-5': '대체공휴일', '10-9': '한글날',
+  '12-25': '성탄절'
+};
+function holidayName(d) {
+  return HOLIDAYS[(d.getMonth()+1) + '-' + d.getDate()] || null;
+}
+// 화면 표시용: 공휴일 토글이 꺼져 있으면 공휴일 이름을 숨긴다(데이터엔 영향 없음)
+function holidayShown(d) {
+  return showHoliday ? holidayName(d) : null;
+}
+
+// pastel background palette (10) + event type text colors
+const PALETTE = ['#ff8fa3','#ffb56b','#ffe66d','#8fe388','#5ad2f4','#6c9bff','#b388ff','#ff7ec7','#c0c0c8'];
+const TYPE_COLORS = { work:'#1a1a1a', important:'#2563a8', holiday:'#b6493b', personal:'#1d9e75' };
+const TYPE_COLORS_DARK = { work:'#f2f2f2', important:'#7fb3ed', holiday:'#e8897c', personal:'#5fd3a8' };
+function isDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
+function evTextColor(e){
+  const t = e.type || 'work';
+  return (isDark()?TYPE_COLORS_DARK:TYPE_COLORS)[t] || (isDark()?'#f2f2f2':'#1a1a1a');
+}
+// fixed background tints for non-work types (same hue family as the text color)
+const TYPE_BG = { important:'#cfe3ff', holiday:'#ffd6d6', personal:'#d4f5cb' };
+const TYPE_BG_DARK = { important:'#23344a', holiday:'#4a2626', personal:'#234a3a' };
+function evBgColor(e){
+  const t = e.type || 'work';
+  if (t !== 'work') return 'transparent';
+  let i = (typeof e.bg === 'number') ? e.bg : 0;
+  return PALETTE[i] || PALETTE[0];
+}
+
+
+function render() {
+  $('ymLabel').textContent = view.getFullYear() + '년 ' + (view.getMonth()+1) + '월';
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+
+  // Measure a weekday cell's width and expose it as --cellw so font sizes can
+  // scale to the cell (works on portrait, landscape, tablet) instead of vw.
+  const gw = grid.clientWidth || (window.innerWidth - 16);
+  const weekdayCellW = (gw - 5) * (5 / 5.8) / 5; // 5 gaps approx, 5 weekday cols of 5.8 units
+  document.documentElement.style.setProperty('--cellw', weekdayCellW + 'px');
+
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const dow1 = first.getDay(); // 0=Sun .. 6=Sat
+
+  // Grid start (compute FIRST): if the 1st is Sat/Sun, begin the body on the
+  // following Monday so the month fits in 5 rows; otherwise start from the
+  // Monday on/before the 1st.
+  let gridStartMonday;
+  if (dow1 === 6) {
+    gridStartMonday = new Date(first); gridStartMonday.setDate(3);
+  } else if (dow1 === 0) {
+    gridStartMonday = new Date(first); gridStartMonday.setDate(2);
+  } else {
+    const offset = (dow1 + 6) % 7; // Mon=0
+    gridStartMonday = new Date(first);
+    gridStartMonday.setDate(first.getDate() - offset);
+  }
+
+  // Corner: the weekend (Sat & Sun) that sits immediately BEFORE the grid's
+  // first Monday. This is the paper-diary corner (e.g. for a month starting
+  // Sunday, corner = the previous day Sat + that Sun).
+  const corner = $('cornerDates');
+  corner.innerHTML = '';
+  const cornerSun = new Date(gridStartMonday); cornerSun.setDate(gridStartMonday.getDate() - 1);
+  const cornerSat = new Date(gridStartMonday); cornerSat.setDate(gridStartMonday.getDate() - 2);
+  const fmtMD = d => (d.getMonth()+1) + '/' + d.getDate();
+
+  [[cornerSat,'sat'],[cornerSun,'sun']].forEach(([d, cls]) => {
+    const row = document.createElement('div');
+    row.className = 'corner-row ' + cls;
+    const dlabel = document.createElement('span');
+    dlabel.className = 'cdate';
+    dlabel.textContent = fmtMD(d);
+    const cornerHolColor = holidayName(d);   // 코너 날짜 색은 항상 공휴일 빨강
+    const cornerHol = holidayShown(d);        // 코너 공휴일 이름은 토글 반영
+    if (cornerHolColor) dlabel.classList.add('holiday');   // 공휴일이면 날짜를 빨강(흐림)
+    row.appendChild(dlabel);
+
+    const di = iso(d);
+    const dayEvents = events.filter(e => e.start === di && e.end === di
+      && isVisibleType(e));
+
+    if (cornerHol) {
+      // 공휴일이면 공휴일 이름을 우선 표시 (예: 추석연휴)
+      const h = document.createElement('span');
+      h.className = 'corner-hol';
+      h.textContent = cornerHol;
+      row.appendChild(h);
+    } else if (dayEvents.length) {
+      const t = document.createElement('span');
+      t.className = 'corner-ev';
+      // 제목은 6글자까지만 보이고 넘으면 …을 붙여 총 7칸으로 고정
+      const rawTitle = dayEvents[0].title || '';
+      const shownTitle = rawTitle.length > 6 ? rawTitle.slice(0, 6) + '…' : rawTitle;
+      t.textContent = shownTitle + (dayEvents.length > 1 ? ' +' + (dayEvents.length-1) : '');
+      t.style.color = evTextColor(dayEvents[0]);
+      row.appendChild(t);
+    }
+    row.addEventListener('click', (ev) => { ev.stopPropagation(); openDay(new Date(d)); });
+    corner.appendChild(row);
+  });
+
+  let start = gridStartMonday;
+
+  // Always render exactly 5 rows.
+  const numWeeks = 5;
+
+  const todayIso = iso(new Date());
+
+  for (let w = 0; w < numWeeks; w++) {
+    const weekStart = new Date(start); weekStart.setDate(start.getDate() + w*7);
+    const week = document.createElement('div');
+    week.className = 'week';
+
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+      weekDates.push(d);
+    }
+
+    // 5 weekday cells
+    for (let i = 0; i < 5; i++) {
+      const d = weekDates[i];
+      week.appendChild(makeCell(d, false, todayIso));
+    }
+    // 1 weekend cell (Sat + Sun)
+    week.appendChild(makeWeekendCell(weekDates[5], weekDates[6], todayIso));
+
+    // event bars for weekdays
+    layoutEvents(week, weekDates, todayIso);
+
+    grid.appendChild(week);
+  }
+}
+
+function makeCell(d, isWeekend, todayIso) {
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  if (d.getMonth() !== view.getMonth()) cell.classList.add('other');
+  if (iso(d) === todayIso) cell.classList.add('today');
+  const num = document.createElement('div');
+  num.className = 'dnum';
+  num.textContent = (d.getMonth() !== view.getMonth())
+    ? (d.getMonth()+1) + '/' + d.getDate()
+    : d.getDate();
+  const hol = holidayName(d);   // 날짜 숫자 색은 토글과 무관하게 항상 공휴일 빨강
+  if (hol) {
+    num.classList.add('holiday'); // 공휴일 날짜는 빨강. 다른 달이면 .other의 opacity로 흐릿하게.
+  }
+  cell.appendChild(num);
+  const evWrap = document.createElement('div');
+  evWrap.className = 'events';
+  cell.appendChild(evWrap);
+  cell.addEventListener('click', () => openDay(d));
+  return cell;
+}
+
+function makeWeekendCell(sat, sun, todayIso) {
+  const cell = document.createElement('div');
+  cell.className = 'cell weekend';
+  if (sat.getMonth() !== view.getMonth() && sun.getMonth() !== view.getMonth()) cell.classList.add('other');
+
+  [['top', sat], ['bot', sun]].forEach(([pos, d]) => {
+    const half = document.createElement('div');
+    half.className = 'we-half ' + pos;
+    if (iso(d) === todayIso) half.classList.add('we-today'); // 오늘이 주말이면 표시
+    const wd = document.createElement('div');
+    wd.className = 'wd';
+    wd.textContent = (d.getMonth() !== view.getMonth())
+      ? (d.getMonth()+1) + '/' + d.getDate()
+      : d.getDate();
+    half.appendChild(wd);
+
+    // weekend holiday name (e.g. 부처님오신날 on a Sunday)
+    // 코너(직전·다음 달 주말)에 오는 공휴일도 이름을 표시한다.
+    const holColor = holidayName(d);   // 날짜 색은 토글과 무관하게 항상
+    const holShow  = holidayShown(d);  // 이름 표시는 토글 반영
+    if (holColor) {
+      wd.classList.add('wd-holiday');  // 토요일이 공휴일이어도 파랑→빨강 유지
+    }
+    if (holShow) {
+      const hn = document.createElement('div');
+      hn.className = 'holiday-name';
+      // 직전/다음 달 주말 공휴일 이름은 흐릿하게 (날짜와 통일)
+      if (d.getMonth() !== view.getMonth()) hn.classList.add('other-hol');
+      hn.textContent = holShow;
+      half.appendChild(hn);
+    }
+
+    // Only single-day events that actually belong to this weekend day.
+    // Multi-day events started on weekdays skip the weekend.
+    // (개인일정 숨김이면 달력에서 제외)
+    const di = iso(d);
+    const dayEvents = events.filter(e => e.start === di && e.end === di
+      && isVisibleType(e));
+    if (dayEvents.length) {
+      const wevs = document.createElement('div');
+      wevs.className = 'wevs';
+      // 직전/다음 달 주말(예: 달력 끝줄의 7/4·7/5)의 일정 내용도 흐릿하게
+      if (d.getMonth() !== view.getMonth()) wevs.classList.add('other-ev');
+      dayEvents.slice(0,3).forEach(e => {
+        const row = document.createElement('div');
+        row.className = 'we-ev';
+        row.textContent = e.title;
+        row.style.color = evTextColor(e);
+        wevs.appendChild(row);
+      });
+      if (dayEvents.length > 3) {
+        const more = document.createElement('div');
+        more.className = 'we-more';
+        more.textContent = '+' + (dayEvents.length - 3);
+        wevs.appendChild(more);
+      }
+      half.appendChild(wevs);
+    }
+    half.addEventListener('click', (ev) => { ev.stopPropagation(); openDay(d); });
+    cell.appendChild(half);
+  });
+  return cell;
+}
+
+function eventsOnDay(d) {
+  const di = iso(d);
+  return events.filter(e => di >= e.start && di <= e.end)
+    .sort((a,b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+}
+
+function layoutEvents(week, weekDates, todayIso) {
+  // Weekday columns 0..4 = weekDates 0..4. Weekend column (index 5) is excluded from bars.
+  // Collect events overlapping this week's Mon..Fri range.
+  const monIso = iso(weekDates[0]);
+  const friIso = iso(weekDates[4]);
+
+  // gather unique events touching Mon..Fri (개인일정 숨김이면 제외)
+  const seen = {};
+  const weekEvents = [];
+  for (let i = 0; i < 5; i++) {
+    eventsOnDay(weekDates[i]).forEach(e => {
+      if (!isVisibleType(e)) return; // 개인/휴일일정 토글 반영
+      if (!seen[e.id]) { seen[e.id] = true; weekEvents.push(e); }
+    });
+  }
+  // sort: 종류 우선순위(휴일>중요>업무>개인) → 시작일 빠른 순 → 긴 순
+  // 위 lane(0번)부터 채워지므로, 우선순위 높은 종류가 위로 올라간다.
+  const TYPE_RANK = { holiday: 0, important: 1, work: 2, personal: 3 };
+  weekEvents.sort((a,b) => {
+    const ra = TYPE_RANK[a.type || 'work'] ?? 2;
+    const rb = TYPE_RANK[b.type || 'work'] ?? 2;
+    if (ra !== rb) return ra - rb;
+    if (a.start !== b.start) return a.start < b.start ? -1 : 1;
+    const la = (parse(a.end)-parse(a.start)), lb = (parse(b.end)-parse(b.start));
+    return lb - la;
+  });
+
+  // How many event rows fit in a weekday cell without touching the date number.
+  const gridEl = $('grid');
+  let cellH = gridEl && gridEl.clientHeight ? gridEl.clientHeight / 5 : 0;
+  if (!cellH) cellH = (window.innerHeight - 110) / 5; // fallback before first measure
+  const LANE_H = 18, DATE_RESERVE = 22, BOTTOM_RESERVE = 13;
+  let MAX_LANES = Math.floor((cellH - DATE_RESERVE - BOTTOM_RESERVE) / LANE_H);
+  if (MAX_LANES < 1) MAX_LANES = 1;
+
+  // Holiday names live in lane 0 of the cells they fall on. Pre-occupy lane 0
+  // for those columns so events never share a row with a holiday name. Every
+  // event (single or multi-day) then uses the SAME lane system, and its
+  // vertical position is purely lane * LANE_H — no separate offset.
+  const layer = document.createElement('div');
+  layer.className = 'barlayer';
+
+  // Holidays occupy lane 0 and are drawn as plain bars (no arrow/bg) so they
+  // use the exact same font, padding and clipping rules as normal events.
+  const lanes = []; // lanes[L] = array of [startCol,endCol] occupied
+  lanes[0] = [];
+  const LANE_H_HOL = 18;
+  for (let i = 0; i < 5; i++) {
+    const hol = holidayShown(weekDates[i]);
+    if (!hol) continue;
+    lanes[0].push([i, i]);
+    const hb = document.createElement('div');
+    hb.className = 'bar holiday-bar';
+    // 직전/다음 달 날짜의 공휴일 이름은 흐릿하게 (날짜 숫자와 통일)
+    if (weekDates[i].getMonth() !== view.getMonth()) hb.classList.add('other');
+    hb.style.background = 'transparent';
+    const totalU = 5 + 0.8, cW = 100 / totalU;
+    hb.style.left = 'calc(' + (i * cW) + '% + 2px)';
+    hb.style.width = 'calc(' + cW + '% - 4px)';
+    hb.style.top = '0px';
+    hb.innerHTML = '<span class="lbl"></span>';
+    hb.querySelector('.lbl').textContent = hol;
+    layer.appendChild(hb);
+  }
+
+  const overflowByCol = [0,0,0,0,0];
+
+  weekEvents.forEach(e => {
+    let startCol = -1, endCol = -1;
+    for (let i = 0; i < 5; i++) {
+      const di = iso(weekDates[i]);
+      if (di >= e.start && di <= e.end) {
+        if (startCol === -1) startCol = i;
+        endCol = i;
+      }
+    }
+    if (startCol === -1) return;
+
+    const isMultiDay = e.start !== e.end;
+    const arrowL = isMultiDay;
+    const arrowR = isMultiDay;
+    const contL = e.start < iso(weekDates[0]);
+    const contR = e.end   > iso(weekDates[4]);
+
+    // find the first lane with no column clash (lane 0 may be blocked by holidays)
+    let lane = -1;
+    for (let L = 0; L < MAX_LANES; L++) {
+      const occ = lanes[L] || [];
+      const clash = occ.some(([s,en]) => !(endCol < s || startCol > en));
+      if (!clash) { lane = L; lanes[L] = occ.concat([[startCol,endCol]]); break; }
+    }
+    if (lane === -1) {
+      for (let c = startCol; c <= endCol; c++) overflowByCol[c]++;
+      return;
+    }
+
+    const bar = document.createElement('div');
+    bar.className = 'bar' + (contL?' cont-l':'') + (contR?' cont-r':'');
+    // 막대가 걸친 첫 칸이 직전/다음 달이면 흐릿하게 (날짜 숫자와 통일)
+    if (weekDates[startCol].getMonth() !== view.getMonth()) bar.classList.add('other-ev');
+    bar.style.background = evBgColor(e);
+    bar.style.color = evTextColor(e);
+    const totalUnits = 5 + 0.8;
+    const colW = 100 / totalUnits;
+    const leftPct = startCol * colW;
+    const widthPct = (endCol - startCol + 1) * colW;
+    bar.style.left = 'calc(' + leftPct + '% + 2px)';
+    bar.style.width = 'calc(' + widthPct + '% - 4px)';
+    bar.style.top = (lane * LANE_H) + 'px';
+
+    let inner = '';
+    if (arrowL) inner += '<span class="head l"></span><span class="line"></span>';
+    inner += '<span class="lbl"></span>';
+    if (arrowR) inner += '<span class="line"></span><span class="head r"></span>';
+    bar.innerHTML = inner;
+    bar.querySelector('.lbl').textContent = e.title;
+    bar.addEventListener('click', (ev) => { ev.stopPropagation(); openEdit(e); });
+    layer.appendChild(bar);
+  });
+
+  week.appendChild(layer);
+
+  // "+N" overflow markers per column
+  for (let i = 0; i < 5; i++) {
+    if (overflowByCol[i] > 0) {
+      const cell = week.querySelectorAll('.cell')[i];
+      const more = document.createElement('div');
+      more.className = 'more';
+      more.style.position = 'absolute';
+      more.style.bottom = '2px';
+      more.textContent = '+' + overflowByCol[i];
+      cell.appendChild(more);
+    }
+  }
+}
+
+/* ---- day sheet ---- */
+function openDay(d) {
+  lastSelectedDate = new Date(d);
+  $('dayTitle').textContent = (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + KDOW[d.getDay()] + ')';
+  const dow = d.getDay();
+  const isWeekend = (dow === 0 || dow === 6);
+  const di = iso(d);
+  // Weekend: only single-day events that belong to this day.
+  // Weekday: all events overlapping this day (incl. multi-day bars).
+  const list = isWeekend
+    ? events.filter(e => e.start === di && e.end === di)
+        .sort((a,b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))
+    : eventsOnDay(d);
+  const wrap = $('dayList');
+  wrap.innerHTML = '';
+  if (list.length === 0) {
+    wrap.innerHTML = '<div class="empty">일정이 없습니다</div>';
+  } else {
+    list.forEach(e => {
+      const row = document.createElement('div');
+      row.className = 'day-ev';
+      const range = (e.start !== e.end) ? fmtRange(e) : '';
+      row.innerHTML = '<div class="info"><div class="t"></div>'+
+        (range?'<div class="sub range"></div>':'')+
+        (e.memo?'<div class="sub memo"></div>':'')+'</div>';
+      const titleEl = row.querySelector('.t');
+      titleEl.textContent = e.title;
+      const tcol = evTextColor(e);
+      titleEl.style.color = tcol;
+      if (range) { const r = row.querySelector('.range'); r.textContent = range; r.style.color = tcol; r.style.opacity = '0.7'; }
+      if (e.memo) { const m = row.querySelector('.memo'); m.textContent = e.memo; m.style.color = tcol; m.style.opacity = '0.7'; }
+      row.addEventListener('click', () => openEdit(e));
+      wrap.appendChild(row);
+    });
+  }
+  showSheet('daySheet');
+}
+function fmtRange(e) {
+  const s = parse(e.start), en = parse(e.end);
+  return (s.getMonth()+1)+'/'+s.getDate()+' – '+(en.getMonth()+1)+'/'+en.getDate();
+}
+
+// 주어진 날짜(시작일)가 속한 '달'에 표시되는 업무 일정들이 쓰는 배경색을 모아,
+// 아직 안 쓰인 첫 색(c0..c8)을 돌려준다. 9색이 모두 쓰였으면 c0부터 순환한다.
+// 걸친 일정(예: 6월말~7월초)은 두 달 모두에서 쓰인 것으로 계산된다.
+function pickUnusedBg(startIsoStr) {
+  const d = startIsoStr ? parse(startIsoStr) : new Date();
+  const y = d.getFullYear(), m = d.getMonth();
+  // 그 달의 시작/끝 경계
+  const monthStart = iso(new Date(y, m, 1));
+  const monthEnd = iso(new Date(y, m + 1, 0));
+  // 그 달과 날짜 범위가 겹치는 업무 일정의 색 수집 (걸친 일정 = 양쪽 달 모두 포함)
+  const used = new Set();
+  events.forEach(ev => {
+    if ((ev.type || 'work') !== 'work') return;          // 업무만 색을 씀
+    if (ev.end < monthStart || ev.start > monthEnd) return; // 그 달과 안 겹치면 제외
+    const bg = (typeof ev.bg === 'number') ? ev.bg : 0;
+    used.add(bg);
+  });
+  // 편집 중인 일정 자신은 제외 (수정 케이스에선 호출 안 하지만 안전장치)
+  for (let i = 0; i < PALETTE.length; i++) {
+    if (!used.has(i)) return i;            // 안 쓰인 첫 색
+  }
+  // 9색이 다 쓰였으면 그 달의 업무 일정 개수 기준으로 순환
+  const count = used.size; // 사실상 9
+  return count % PALETTE.length; // = 0 (c0부터 다시)
+}
+
+/* ---- edit sheet ---- */
+function openEdit(e, fromSearch) {
+  closeSheet('daySheet');
+  cameFromSearch = !!fromSearch;
+  // 검색을 거쳐 들어온 경우에만 헤더에 '검색' 뒤로 버튼을 보여준다
+  document.querySelector('.edit-head').classList.toggle('from-search', cameFromSearch);
+  if (e) {
+    editingId = e.id;
+    $('editTitle').textContent = '일정 수정';
+    $('fTitle').value = e.title;
+    $('fStart').value = e.start;
+    $('fEnd').value = e.end;
+    $('fMemo').value = e.memo || '';
+    selectedType = e.type || 'work';
+    selectedBg = (typeof e.bg === 'number') ? e.bg : 0;
+    $('deleteRow').style.display = 'flex';
+  } else {
+    editingId = null;
+    $('editTitle').textContent = '새 일정';
+    const base = lastSelectedDate ? iso(lastSelectedDate) : iso(new Date());
+    $('fTitle').value = '';
+    $('fStart').value = base;
+    $('fEnd').value = base;
+    $('fMemo').value = '';
+    selectedType = 'work';
+    selectedBg = pickUnusedBg(base); // 그 달에 안 쓰인 색을 기본값으로
+    $('deleteRow').style.display = 'none';
+  }
+  document.querySelectorAll('#types .type-chip').forEach(c => {
+    c.classList.toggle('sel', c.dataset.t === selectedType);
+  });
+  document.querySelectorAll('#colors .sw').forEach(sw => {
+    sw.classList.toggle('sel', +sw.dataset.c === selectedBg);
+  });
+  syncWeekendRule();
+  setTimeout(() => showSheet('editSheet'), 180);
+}
+
+// Disable background-color picker only for non-work types
+// (업무는 하루/여러날 모두 배경색 적용 가능)
+function syncColorsEnabled() {
+  const nonWork = (selectedType && selectedType !== 'work');
+  $('colors').classList.toggle('disabled', nonWork);
+  $('colorsHint').classList.toggle('show', nonWork);
+  $('colorsHint').textContent = '이 종류는 배경색이 자동으로 정해집니다';
+}
+
+// 시작일이 주말(토/일)이면 '업무' 종류를 막고, 업무였다면 '중요일정'으로 자동 전환
+function isWeekendDate(isoStr) {
+  if (!isoStr) return false;
+  const dow = parse(isoStr).getDay();
+  return dow === 0 || dow === 6;
+}
+function syncWeekendRule() {
+  const weekend = isWeekendDate($('fStart').value);
+  const workChip = document.querySelector('#types .type-chip[data-t=work]');
+  if (weekend) {
+    // 업무가 선택돼 있었으면 중요일정으로 자동 변경
+    if (selectedType === 'work') {
+      selectedType = 'important';
+      document.querySelectorAll('#types .type-chip').forEach(c =>
+        c.classList.toggle('sel', c.dataset.t === selectedType));
+    }
+    if (workChip) workChip.classList.add('chip-disabled');
+    $('weekendHint').classList.add('show');
+  } else {
+    if (workChip) workChip.classList.remove('chip-disabled');
+    $('weekendHint').classList.remove('show');
+  }
+  syncColorsEnabled();
+}
+
+function saveEvent() {
+  const title = $('fTitle').value.trim();
+  if (!title) { $('fTitle').focus(); return; }
+  let start = $('fStart').value, end = $('fEnd').value;
+  if (!start) start = iso(new Date());
+  if (!end || end < start) end = start;
+  const data = {
+    title, start, end,
+    memo: $('fMemo').value.trim(),
+    type: selectedType,
+    bg: selectedBg
+  };
+  let isEdit = false;
+  if (editingId) {
+    const idx = events.findIndex(x => x.id === editingId);
+    if (idx >= 0) events[idx] = { ...events[idx], ...data };
+    isEdit = true;
+  } else {
+    events.push({ id: uid(), ...data });
+  }
+  save();
+  closeSheet('editSheet');
+  render();
+  showToast(isEdit ? '일정 변경 완료되었습니다' : '일정 추가 완료되었습니다');
+}
+
+function deleteEvent() {
+  if (!editingId) return;
+  events = events.filter(x => x.id !== editingId);
+  save();
+  closeSheet('editSheet');
+  render();
+  showToast('일정 삭제 완료되었습니다');
+}
+
+/* ---- sheet helpers ---- */
+// html+body 동시에 잠금/해제 (키보드가 올라와도 뒤 달력이 안 밀리게)
+function lockBack() {
+  document.documentElement.classList.add('sheet-open');
+  document.body.classList.add('sheet-open');
+}
+function unlockBack() {
+  document.documentElement.classList.remove('sheet-open');
+  document.body.classList.remove('sheet-open');
+}
+function showSheet(id) {
+  $('scrim').classList.add('open'); $(id).classList.add('open');
+  lockBack();
+}
+function closeSheet(id) {
+  $(id).classList.remove('open');
+  const anyOpen = document.querySelectorAll('.sheet.open').length;
+  if (!anyOpen) { $('scrim').classList.remove('open'); unlockBack(); }
+}
+function closeAll() {
+  document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
+  $('scrim').classList.remove('open');
+  unlockBack();
+  cameFromSearch = false;
+  searchFromSettings = false;
+  if (_navActive) { _navActive = false; history.back(); }
+}
+
+/* ---- year/month picker ---- */
+function openPicker() {
+  const yearCol = $('yearCol');
+  const monthCol = $('monthCol');
+  yearCol.innerHTML = '';
+  monthCol.innerHTML = '';
+  const curY = view.getFullYear();
+  const curM = view.getMonth();
+  for (let y = curY - 5; y <= curY + 5; y++) {
+    const o = document.createElement('div');
+    o.className = 'opt' + (y === curY ? ' sel' : '');
+    o.textContent = y + '년';
+    o.onclick = () => {
+      view.setFullYear(y); render();
+      [...yearCol.children].forEach(c => c.classList.toggle('sel', c === o));
+    };
+    yearCol.appendChild(o);
+  }
+  for (let m = 0; m < 12; m++) {
+    const o = document.createElement('div');
+    o.className = 'opt' + (m === curM ? ' sel' : '');
+    o.textContent = (m+1) + '월';
+    o.onclick = () => {
+      view.setDate(1); view.setMonth(m); render();
+      [...monthCol.children].forEach(c => c.classList.toggle('sel', c === o));
+    };
+    monthCol.appendChild(o);
+  }
+  $('pickerScrim').classList.add('open');
+  $('picker').classList.add('open');
+  lockBack();
+  // center current selections
+  setTimeout(() => {
+    const sy = yearCol.querySelector('.sel'); if (sy) sy.scrollIntoView({block:'center'});
+    const sm = monthCol.querySelector('.sel'); if (sm) sm.scrollIntoView({block:'center'});
+  }, 30);
+}
+function closePicker() {
+  $('picker').classList.remove('open');
+  $('pickerScrim').classList.remove('open');
+  unlockBack();
+}
+
+/* ---- events ---- */
+// 검색을 거쳐 들어온 수정 화면에서 '뒤로' 버튼 → 폰 뒤로가기와 동일하게 처리
+function backToSearchList() {
+  if (_navActive) {
+    history.back(); // popstate 핸들러가 검색 목록 복원을 담당
+  } else {
+    cameFromSearch = false;
+    closeSheet('editSheet');
+    if (lastSearchQuery) setTimeout(() => showSearchResults(lastSearchQuery), 60);
+  }
+}
+$('titleBtn').onclick = openPicker;
+$('pickerScrim').onclick = closePicker;
+$('backToSearch').onclick = backToSearchList;
+$('addBtn').onclick = () => { lastSelectedDate = lastSelectedDate || new Date(); openEdit(null); };
+$('addOnDay').onclick = () => openEdit(null);
+// 업무일정 표시/숨김 토글
+function syncWorkToggle() {
+  $('workToggle').classList.toggle('off', !showWork);
+}
+$('workToggle').onclick = () => {
+  showWork = !showWork;
+  localStorage.setItem('workcal.showWork', showWork ? 'on' : 'off');
+  syncWorkToggle();
+  render();
+  showToast(showWork ? '업무일정을 표시합니다' : '업무일정을 숨깁니다 (날짜를 누르면 보입니다)');
+};
+syncWorkToggle();
+// 중요일정 표시/숨김 토글
+function syncImportantToggle() {
+  $('importantToggle').classList.toggle('off', !showImportant);
+}
+$('importantToggle').onclick = () => {
+  showImportant = !showImportant;
+  localStorage.setItem('workcal.showImportant', showImportant ? 'on' : 'off');
+  syncImportantToggle();
+  render();
+  showToast(showImportant ? '중요일정을 표시합니다' : '중요일정을 숨깁니다 (날짜를 누르면 보입니다)');
+};
+syncImportantToggle();
+// 개인일정 표시/숨김 토글
+function syncPersonalToggle() {
+  $('personalToggle').classList.toggle('off', !showPersonal);
+}
+$('personalToggle').onclick = () => {
+  showPersonal = !showPersonal;
+  localStorage.setItem('workcal.showPersonal', showPersonal ? 'on' : 'off');
+  syncPersonalToggle();
+  render();
+  showToast(showPersonal ? '개인일정을 표시합니다' : '개인일정을 숨깁니다 (날짜를 누르면 보입니다)');
+};
+syncPersonalToggle();
+// 공휴일+휴일일정 표시/숨김 토글
+function syncHolidayToggle() {
+  $('holidayToggle').classList.toggle('off', !showHoliday);
+}
+$('holidayToggle').onclick = () => {
+  showHoliday = !showHoliday;
+  localStorage.setItem('workcal.showHoliday', showHoliday ? 'on' : 'off');
+  syncHolidayToggle();
+  render();
+  showToast(showHoliday ? '공휴일·휴일일정을 표시합니다' : '공휴일·휴일일정을 숨깁니다');
+};
+syncHolidayToggle();
+$('cancelEdit').onclick = () => closeSheet('editSheet');
+$('saveEdit').onclick = saveEvent;
+$('fStart').onchange = syncWeekendRule;
+$('fEnd').onchange = syncColorsEnabled;
+$('deleteEvent').onclick = deleteEvent;
+$('scrim').onclick = closeAll;
+document.querySelectorAll('#colors .sw').forEach(sw => {
+  sw.onclick = () => {
+    selectedBg = +sw.dataset.c;
+    document.querySelectorAll('#colors .sw').forEach(s => s.classList.toggle('sel', s===sw));
+  };
+});
+document.querySelectorAll('#types .type-chip').forEach(chip => {
+  chip.onclick = () => {
+    selectedType = chip.dataset.t;
+    document.querySelectorAll('#types .type-chip').forEach(c => c.classList.toggle('sel', c===chip));
+    syncColorsEnabled();
+  };
+});
+
+// Keep the edit sheet above the on-screen keyboard.
+(function () {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  let lastKb = -1;
+  let scrolledFor = null; // 이번 포커스에서 이미 끌어올렸는지 (중복 스크롤 방지)
+  const setKb = () => {
+    const kb = Math.round(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    // 1~2px 미세 변동은 무시해서 시트가 출렁이지 않게 한다
+    if (Math.abs(kb - lastKb) < 4) return false;
+    lastKb = kb;
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    return true;
+  };
+  // resize(키보드 등장/사라짐)에서만 필요 시 한 번 끌어올린다
+  vv.addEventListener('resize', () => {
+    const changed = setKb();
+    const kb = lastKb;
+    const el = document.activeElement;
+    if (kb > 0 && el && el.getBoundingClientRect && el.scrollIntoView) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom > vv.height - 8 && scrolledFor !== el) {
+        scrolledFor = el;
+        el.scrollIntoView({ block: 'center' }); // smooth 제거: 즉시 이동(반복 떨림 방지)
+      }
+    }
+    if (kb === 0) scrolledFor = null; // 키보드 내려가면 초기화
+  });
+  // scroll 이벤트에서는 값 갱신도 스크롤도 하지 않는다 (떨림의 주원인이라 무시)
+})();
+
+// 어떤 입력칸이든 포커스가 들어오면 뒤 달력을 잠그고, 빠지면 (열린 시트가
+// 없을 때) 풀어준다. 이렇게 전역으로 한 번만 걸어두면 앞으로 어떤 입력칸을
+// 새로 추가해도 자동으로 뒤가 잠긴다 — 매번 따로 처리할 필요가 없다.
+(function () {
+  const isField = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  document.addEventListener('focusin', (e) => {
+    if (isField(e.target)) lockBack();
+  });
+  document.addEventListener('focusout', () => {
+    // 포커스가 다른 입력칸으로 옮겨가는 중일 수 있으니 한 박자 뒤에 확인
+    setTimeout(() => {
+      const stillField = isField(document.activeElement);
+      const anySheet = document.querySelectorAll('.sheet.open, .picker.open').length;
+      if (!stillField && !anySheet) unlockBack();
+    }, 60);
+  });
+})();
+
+// [터치 스크롤 가드] 시트 안에서 손가락으로 스크롤할 때, 시트가 이미 맨 위/맨
+// 아래에 닿았는데도 더 끌면 그 움직임이 뒤 달력으로 새어나가(스크롤 체이닝)
+// 화면이 떨린다. 끝에 닿은 상태에서의 '바깥 방향' 드래그만 막아 뒤로 전달되지
+// 않게 한다. (특히 안드로이드 크롬에서 CSS overscroll-behavior만으론 부족함)
+// 또한 메모(textarea)처럼 '시트 안에서 자체 스크롤되는 영역'을 만지면 그쪽
+// 스크롤을 우선하고, 그 영역이 끝에 닿았을 때만 동작을 막는다.
+(function () {
+  let startY = 0;
+  let target = null;     // 시트/피커
+  let inner = null;      // 시트 안에서 자체 스크롤되는 영역(textarea 등)
+  // 세로로 스크롤 가능한 요소인지 (textarea + overflow 걸린 영역: 피커 목록 등)
+  function scrollableEl(el) {
+    while (el && el !== document.body) {
+      if (el.tagName === 'TEXTAREA' && el.scrollHeight > el.clientHeight) return el;
+      // 피커의 년/월 목록(.picker-col)처럼 overflow-y로 자체 스크롤되는 영역
+      if (el.classList && el.classList.contains('picker-col') && el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+  document.addEventListener('touchstart', (e) => {
+    target = e.target.closest('.sheet, .picker');
+    inner = scrollableEl(e.target);
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!target) {
+      // 시트 바깥(달력 등)을 만지는 경우: 시트가 열려 있으면 뒤 스크롤 자체를 막음
+      if (document.querySelector('.sheet.open, .picker.open')) e.preventDefault();
+      return;
+    }
+    const y = e.touches[0].clientY;
+    const dy = y - startY; // 아래로 끌면 +, 위로 끌면 -
+
+    // 1) 메모(textarea) 등 내부 스크롤 영역을 만지는 중이면 그쪽 스크롤을 우선한다.
+    //    그 영역이 끝에 닿은 채로 더(바깥 방향) 끌 때만 막아서, 시트/뒤로 안 샌다.
+    if (inner) {
+      const iTop = inner.scrollTop <= 0;
+      const iBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1;
+      if ((iTop && dy > 0) || (iBottom && dy < 0)) {
+        e.preventDefault(); // 내부 영역 끝 → 시트로 전달 차단
+      }
+      return; // 내부 영역 안에서는 브라우저 기본 스크롤에 맡긴다
+    }
+
+    // 2) 그 외(시트 본문) — 시트가 끝에 닿은 채 바깥 방향으로 끌면 막는다
+    const atTop = target.scrollTop <= 0;
+    const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1;
+    const scrollable = target.scrollHeight > target.clientHeight;
+    if (!scrollable || (atTop && dy > 0) || (atBottom && dy < 0)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+
+/* ===== 달력 위아래 제스처로 달 넘기기 (3.05) =====
+   - 폰: 그리드를 세로로 스와이프 (위로 밀면 다음 달, 아래로 끌면 이전 달)
+   - PC: 그리드 위에서 마우스 휠
+   - 시트/피커가 열려 있을 때는 동작하지 않는다(기존 닫기 드래그와 충돌 방지).
+   - 실수 방지: 일정 거리(SWIPE_MIN) 이상, 가로보다 세로로 더 많이 끌었을 때만. */
+(function () {
+  const SWIPE_MIN = 60;     // 이 거리(px) 이상 끌어야 달이 넘어감
+  const WHEEL_MIN = 30;     // 휠 누적 임계치
+  const gridEl = document.getElementById('grid');
+  if (!gridEl) return;
+
+  // 공용 달 이동: delta = +1(다음 달) / -1(이전 달)
+  function goMonth(delta) {
+    view.setDate(1);
+    view.setMonth(view.getMonth() + delta);
+    render();
+    // 방향에 맞는 슬라이드 애니메이션을 새로 그려진 그리드에 입힌다.
+    // (연속 호출에도 매번 재생되도록 클래스 제거→reflow→추가)
+    const g = document.getElementById('grid');
+    if (g) {
+      const cls = delta > 0 ? 'slide-up' : 'slide-down';
+      g.classList.remove('slide-up', 'slide-down');
+      void g.offsetWidth;            // reflow 강제 — 애니메이션 재시작용
+      g.classList.add(cls);
+      g.addEventListener('animationend', () => g.classList.remove(cls), { once: true });
+    }
+  }
+
+  // 시트나 피커가 열려 있으면 제스처 비활성
+  function blocked() {
+    return !!document.querySelector('.sheet.open, .picker.open');
+  }
+
+  /* --- 터치 스와이프 --- */
+  let sx = 0, sy = 0, tracking = false;
+  gridEl.addEventListener('touchstart', (e) => {
+    if (blocked()) { tracking = false; return; }
+    tracking = true;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+
+  // 세로로 끄는 동안 브라우저 기본 동작(스크롤·주소창 움찔)을 막는다.
+  // 이게 없으면 위로 드래그(다음 달)할 때 시스템이 스크롤/주소창 숨김을 시도해
+  // 헤더·요일줄 등 위쪽 고정 영역이 통째로 흔들렸음(이전 달은 그 방향이라 무사).
+  // 세로 우세 드래그일 때만 preventDefault 하여 흔들림을 차단한다.
+  gridEl.addEventListener('touchmove', (e) => {
+    if (!tracking || blocked()) return;
+    const t = e.touches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    // 세로 우세 드래그면 기본 동작 차단
+    if (Math.abs(dy) > Math.abs(dx)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  gridEl.addEventListener('touchend', (e) => {
+    if (!tracking || blocked()) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    // 가로 우세 + 충분한 거리 → 좌우 스와이프 (메모장)
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) >= SWIPE_MIN) {
+      if (dx < 0) openMemo();   // 왼쪽으로 밀면 메모장 열기
+      return;                   // 오른쪽으로 민 경우는 달력에서 할 일 없음
+    }
+    // 세로로 충분히, 그리고 가로보다 세로로 더 많이 움직였을 때만 → 달 넘김
+    if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) <= Math.abs(dx)) return;
+    goMonth(dy < 0 ? 1 : -1);   // 위로 밀면(dy<0) 다음 달
+  }, { passive: true });
+
+  /* --- 마우스 휠 (PC) --- */
+  let wheelAcc = 0, wheelTimer = null;
+  gridEl.addEventListener('wheel', (e) => {
+    if (blocked()) return;
+    e.preventDefault();              // 페이지 스크롤 대신 달 넘기기
+    wheelAcc += e.deltaY;
+    if (Math.abs(wheelAcc) >= WHEEL_MIN) {
+      goMonth(wheelAcc > 0 ? 1 : -1); // 휠 아래로(+) = 다음 달
+      wheelAcc = 0;
+    }
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => { wheelAcc = 0; }, 200);
+  }, { passive: false });
+})();
+
+
+// Voice input via Web Speech API (mic buttons on 제목/메모)
+(function () {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micButtons = document.querySelectorAll('.mic-btn');
+  if (!SR) { micButtons.forEach(b => b.style.display = 'none'); return; }
+
+  let rec = null, activeBtn = null, baseText = '';
+
+  function stop() { if (rec) { try { rec.stop(); } catch(e){} } }
+  function startFor(btn) {
+    const field = document.getElementById(btn.dataset.target);
+    if (!field) return;
+    rec = new SR();
+    rec.lang = 'ko-KR';
+    rec.interimResults = true;
+    rec.continuous = false;
+    activeBtn = btn;
+    baseText = field.value ? field.value.trim() + ' ' : '';
+    rec.onresult = (ev) => {
+      let txt = '';
+      for (let i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+      field.value = baseText + txt;
+    };
+    rec.onerror = (ev) => { showToast(micErrorText(ev && ev.error)); endUI(); };
+    rec.onend = () => endUI();
+    btn.classList.add('listening');
+    try { rec.start(); } catch(e) { endUI(); }
+  }
+  function endUI() {
+    if (activeBtn) activeBtn.classList.remove('listening');
+    activeBtn = null; rec = null;
+  }
+  function micErrorText(code) {
+    if (code === 'not-allowed' || code === 'service-not-allowed')
+      return '마이크 권한이 없습니다. 파일을 직접 연 경우(file://) 음성입력이 막힙니다.';
+    if (code === 'no-speech') return '음성이 감지되지 않았습니다.';
+    if (code === 'network') return '네트워크 연결이 필요합니다.';
+    if (code === 'audio-capture') return '마이크를 찾을 수 없습니다.';
+    return '음성 입력을 사용할 수 없는 환경입니다.';
+  }
+  micButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (activeBtn === btn) { stop(); return; }
+      if (rec) stop();
+      startFor(btn);
+    });
+  });
+})();
+
+// settings / backup
+function openSettings() {
+  $('evCount').textContent = '일정 ' + events.length + '개';
+  try {
+    const bk = JSON.parse(localStorage.getItem(STORE + '.backup') || 'null');
+    $('backupInfo').textContent = bk && bk.at
+      ? '마지막 자동 백업: ' + new Date(bk.at).toLocaleString('ko-KR') + ' (이 기기 안에 보관됩니다)'
+      : '일정을 저장하면 이 기기 안에 자동 백업이 만들어집니다.';
+  } catch(e) { $('backupInfo').textContent = ''; }
+  showSheet('settingsSheet');
+}
+function exportBackup() {
+  const data = JSON.stringify({ app: 'workcal', version: 2, exportedAt: Date.now(), events, memo: memoText, memoHist: memoHistory }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  a.href = url;
+  a.download = '캘린더백업_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('일정·메모 내보내기 완료되었습니다');
+}
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const list = Array.isArray(parsed) ? parsed : parsed.events;
+      if (!Array.isArray(list)) throw new Error('형식 오류');
+      // 메모 포함 여부 (version 2+ 백업에만 존재 — 구버전 호환)
+      const hasMemo = !Array.isArray(parsed) &&
+        (typeof parsed.memo === 'string' || Array.isArray(parsed.memoHist));
+      const msg = hasMemo
+        ? '가져오면 현재 일정과 메모가 이 백업으로 바뀝니다. 진행할까요?'
+        : '가져오면 현재 일정이 이 백업으로 바뀝니다. 진행할까요?';
+      if (!confirm(msg)) return;
+      events = list;
+      save();
+      render();
+      // 메모도 백업에 있으면 함께 복원 (없으면 기존 메모 그대로 둠)
+      if (hasMemo) {
+        memoText = typeof parsed.memo === 'string' ? parsed.memo : '';
+        memoHistory = Array.isArray(parsed.memoHist) ? parsed.memoHist : [];
+        try {
+          localStorage.setItem(MEMO_KEY, memoText);
+          localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory));
+        } catch(e) {}
+        // 클라우드엔 본문+이력 한 번에
+        if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
+          window.cloudSaveMemo(memoText, memoHistory);
+        }
+        const ta = $('memoText');
+        if (ta && document.activeElement !== ta) ta.value = memoText;
+        if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
+      }
+      $('evCount').textContent = '일정 ' + events.length + '개';
+      $('backupInfo').textContent = hasMemo
+        ? '가져오기 완료: 일정 ' + events.length + '개 + 메모를 복원했습니다.'
+        : '가져오기 완료: ' + events.length + '개 일정을 복원했습니다.';
+      showToast(hasMemo ? '일정·메모 가져오기 완료되었습니다' : '캘린더 가져오기 완료되었습니다');
+    } catch(e) {
+      $('backupInfo').textContent = '가져오기 실패: 올바른 백업 파일이 아닙니다.';
+      showToast('가져오기 실패: 올바른 파일이 아닙니다');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---- search ---- */
+// escape text for safe HTML, then wrap matched parts with a highlight span
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+function highlight(text, q) {
+  const safe = escapeHtml(text);
+  if (!q) return safe;
+  const lc = text.toLowerCase(), lq = q.toLowerCase();
+  let out = '', from = 0, idx;
+  while ((idx = lc.indexOf(lq, from)) !== -1) {
+    out += escapeHtml(text.slice(from, idx));
+    out += '<span class="sr-hl">' + escapeHtml(text.slice(idx, idx + q.length)) + '</span>';
+    from = idx + q.length;
+  }
+  out += escapeHtml(text.slice(from));
+  return out;
+}
+function runSearch() {
+  const q = $('searchInput').value.trim();
+  if (!q) { $('searchInput').focus(); return; }
+  // 이 검색은 설정 시트에서 시작된 것 — 검색을 끝낼 때 설정 시트로 되돌아간다.
+  searchFromSettings = $('settingsSheet').classList.contains('open');
+  // 키보드를 먼저 내린다
+  $('searchInput').blur();
+  // 키보드가 내려가는 동안(뷰포트가 다시 커지는 동안) 잠깐 기다렸다가 결과 시트를 올린다
+  setTimeout(() => showSearchResults(q), 220);
+}
+function showSearchResults(q) {
+  lastSearchQuery = q; // 뒤로가기로 이 목록을 다시 열 수 있게 기억
+  const lq = q.toLowerCase();
+  const hits = events
+    .filter(e =>
+      (e.title || '').toLowerCase().includes(lq) ||
+      (e.memo  || '').toLowerCase().includes(lq))
+    .sort((a, b) => (a.start < b.start ? 1 : a.start > b.start ? -1 : 0)); // 최신 시작일 먼저
+
+  $('searchTitle').textContent = '검색 결과 · ' + hits.length + '개';
+  const wrap = $('searchList');
+  wrap.innerHTML = '';
+  if (hits.length === 0) {
+    wrap.innerHTML = '<div class="empty">"' + escapeHtml(q) + '"에 해당하는 일정이 없습니다</div>';
+  } else {
+    hits.forEach(e => {
+      const item = document.createElement('div');
+      item.className = 'sr-item';
+      const dateStr = (e.start === e.end) ? e.start : (e.start + ' ~ ' + e.end);
+      let html = '';
+      html += '<div class="sr-line"><span class="k">날짜: </span><span class="sr-date">' + escapeHtml(dateStr) + '</span></div>';
+      html += '<div class="sr-title" style="color:' + evTextColor(e) + '">' + highlight(e.title || '', q) + '</div>';
+      if (e.memo) {
+        html += '<div class="sr-line"><span class="k">내용:</span></div>';
+        html += '<div class="sr-memo">' + highlight(e.memo, q) + '</div>';
+      }
+      item.innerHTML = html;
+      item.addEventListener('click', () => { closeSheet('searchSheet'); openEdit(e, true); });
+      wrap.appendChild(item);
+    });
+  }
+  // 설정 시트가 열려 있으면 닫는다 — 검색 시트가 그 위에 겹쳐 뜨면서
+  // 결과가 적을 때 뒤의 설정 시트가 비쳐 보이는 문제를 막는다.
+  // (검색을 닫을 때 searchFromSettings 플래그로 설정 시트를 다시 띄운다.)
+  $('settingsSheet').classList.remove('open');
+  showSheet('searchSheet');
+  // 폰 뒤로가기로 이 목록을 닫을 수 있도록 history에 표시
+  pushNav();
+}
+$('settingsBtn').onclick = openSettings;
+$('memoBtn').onclick = openMemo;
+$('exportBtn').onclick = exportBackup;
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
+$('searchBtn').onclick = runSearch;
+// [Rev610] 쿠폰 적용 버튼 + 엔터키
+if ($('couponBtn')) $('couponBtn').onclick = applyCoupon;
+if ($('couponInput')) $('couponInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } });
+// 메모장 버튼들
+$('memoBack').onclick = closeMemo;
+$('memoHistoryBtn').onclick = openMemoHistory;
+$('memoHistoryClose').onclick = closeMemoHistory;
+// 메모장에서 오른쪽으로 드래그하면 달력으로 닫기 + 상단바 탭하면 키보드 내림
+(function(){
+  const panel = $('memoPanel');
+  const ta = $('memoText');
+  const bar = panel.querySelector('.memo-bar');
+  const SWIPE = 70;   // 달력 복귀로 인정할 가로 드래그 최소 거리(px)
+  let mx = 0, my = 0, mt = false;
+  panel.addEventListener('touchstart', (e) => {
+    mt = true;
+    mx = e.touches[0].clientX; my = e.touches[0].clientY;
+  }, { passive: true });
+  panel.addEventListener('touchend', (e) => {
+    if (!mt) return; mt = false;
+    if ($('memoHistory').classList.contains('open')) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - mx;
+    const dy = t.clientY - my;
+    const moved = Math.abs(dx) + Math.abs(dy);
+    // 거의 안 움직였으면(=탭) : 상단 바를 탭한 경우 키보드 내림
+    if (moved < 10) {
+      if (bar.contains(e.target)) ta.blur();
+      return;
+    }
+    // 오른쪽으로 충분히 끈 가로 드래그 → 달력 복귀.
+    // textarea 안에서 시작해도 허용한다(메모는 가로 스크롤이 없어 편집과 충돌 없음).
+    // 세로 우세 드래그는 그대로 두어 textarea 스크롤/커서 이동에 맡긴다.
+    if (dx > SWIPE && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      closeMemo();
+    }
+  }, { passive: true });
+  // 상단 바를 누르면(클릭) 키보드 내림 — 버튼 외 영역
+  bar.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    ta.blur();
+  });
+})();
+$('closeSearch').onclick = () => {
+  closeSheet('searchSheet');
+  if (_navActive) { _navActive = false; history.back(); }
+  // 검색을 설정에서 시작했다면 설정 시트로 되돌아간다.
+  if (searchFromSettings) {
+    searchFromSettings = false;
+    openSettings();
+  }
+};
+$('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+
+render();
+// after first paint, cell height is known — re-render once so lane count is accurate
+requestAnimationFrame(() => requestAnimationFrame(render));
+// 메모 본문·이력 초기 로드(로컬)
+loadMemo();
+// [Rev610] 프리미엄(광고 제거) 상태 초기 반영 — 로컬 기억 먼저, 클라우드는 로그인 후 따라옴
+initPremium();
+
+/* ===== 인증 + 클라우드 연동 (3.0) =====
+   흐름:
+     앱 시작 → (스플래시) → 로그인 상태 확인
+       · 로그인 안 됨 → 로그인 게이트 표시, 캘린더 숨김
+       · 로그인 됨   → 게이트 숨김, 캘린더 표시 → 이사(1회) → 실시간 동기화 시작
+   로컬(localStorage)은 종전대로 항상 동작하므로, 클라우드는 그 위에 얹히는 층이다. */
+
+// 클라우드에서 새 데이터가 도착하면 화면/로컬을 갱신 (되쏘지 않음 — 메아리 방지)
+window.onCloudData = function(incoming) {
+  events = incoming;
+  try {
+    localStorage.setItem(STORE, JSON.stringify(events));
+    localStorage.setItem(STORE + '.backup', JSON.stringify({ at: Date.now(), events }));
+  } catch(e) {}
+  render();
+};
+
+// 클라우드에서 메모(본문/이력)가 도착하면 화면/로컬 갱신 (일정과 독립)
+window.onCloudMemoData = function(memo, memoHist) {
+  const panel = $('memoPanel');
+  const panelOpen = panel && panel.classList.contains('open');
+  const ta = $('memoText');
+
+  // [Rev611] 본문 갱신 조건을 "메모장 열림(panelOpen)"에서
+  //          "지금 실제로 편집 중인가"로 정교화한다.
+  //  ── 배경: Rev610까지는 메모장이 떠 있기만 하면(panelOpen) 본문 갱신을
+  //     통째로 막았다. 그 결과 "메모장을 열어 가만히 보고만 있는데" 다른 기기에서
+  //     바뀐 내용이 화면에 안 들어오고, 그 상태로 메모장을 닫으면 옛 화면값이
+  //     클라우드 최신을 덮어쓰는 사고가 났다(이번에 PC에서 겪은 문제).
+  //  ── 해결: 일정(events)이 편집 폼과 분리돼 있어 뒤에서 자연 갱신되는 것처럼,
+  //     메모도 "진짜 편집 중일 때"만 본문을 보호하고, 그 외에는 갱신되게 한다.
+  //     편집 중 판정은 두 신호를 OR로 본다.
+  //       (1) isEditing — textarea에 포커스가 있음(키보드 띄우고 타이핑 중)
+  //       (2) isDirty   — 열었을 때(_memoOpenSnapshot)와 화면 내용이 달라짐
+  //                       (= 저장 안 한 내 수정이 있음. 포커스가 잠깐 빠져도 보호)
+  //     → 둘 다 아니면(닫혀 있거나, 열려도 구경만 하는 중) 서버 최신으로 갱신.
+  //     → 하나라도 참이면 본문은 안 덮고(내 글자/수정 보호), 히스토리만 받는다.
+  //     ※ 본문은 못 합치므로 충돌 시 "마지막에 저장한 쪽이 최신"은 그대로다.
+  const isEditing = panelOpen && ta && (document.activeElement === ta);
+  const isDirty   = panelOpen && ta && (ta.value !== _memoOpenSnapshot);
+  const editing   = isEditing || isDirty;
+
+  // 본문: 편집 중이 아닐 때만 갱신 (닫혀 있을 때 + 열고 구경만 할 때 포함)
+  if (!editing) {
+    memoText = (typeof memo === 'string') ? memo : '';
+    try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
+    // 메모장이 열린 채(구경 중) 갱신된 경우 화면 textarea와 기준 스냅샷도 함께 갱신.
+    // 기준값까지 새로 잡아둬야, 이후 닫을 때 "안 고쳤는데 옛값으로 덮어쓰는" 일이 없다.
+    if (panelOpen && ta) {
+      ta.value = memoText;
+      _memoOpenSnapshot = memoText;
+    }
+  }
+
+  // 히스토리: 항상 갱신 (열려 있어도) — 다른 기기에서 쌓인 버전이 사라지지 않게.
+  if (Array.isArray(memoHist)) {
+    memoHistory = memoHist;
+    try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {}
+    // 이력창이 열려 있으면 목록 다시 그림
+    if ($('memoHistory') && $('memoHistory').classList.contains('open')) openMemoHistory();
+  }
+};
+
+// Firebase 모듈이 준비된 뒤 콜백 실행 (이미 준비됐으면 즉시)
+function whenCloudReady(fn) {
+  if (window.cloudReady) { fn(); }
+  else { document.addEventListener('cloud-ready', fn, { once: true }); }
+}
+
+// 스플래시 숨김 — 앱 시작 후 최소 표시 시간(SPLASH_MIN_MS)을 보장한 뒤
+// 부드럽게 사라지게 한다. 로딩이 더 빨라도 로고가 깜빡이지 않도록.
+const SPLASH_MIN_MS = 800;
+const _splashStart = Date.now();
+let _splashHidden = false;
+function hideSplash() {
+  if (_splashHidden) return;
+  _splashHidden = true;
+  const elapsed = Date.now() - _splashStart;
+  const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
+  setTimeout(() => { $('authSplash').classList.add('hide'); }, wait);
+}
+
+// 화면 전환: 로그인 게이트 ↔ 캘린더
+function showAuthGate() {
+  hideSplash();
+  $('authGate').classList.add('show');
+  $('app').classList.remove('ready');
+}
+function showCalendar() {
+  hideSplash();
+  $('authGate').classList.remove('show');
+  $('app').classList.add('ready');
+}
+
+// 로그인 상태가 바뀔 때마다 호출됨 (Firebase 인증 층 → 본문)
+let _cloudStarted = false;
+window.onAuthChange = async function(user) {
+  if (user) {
+    showCalendar();
+    if ($('accountEmail')) $('accountEmail').textContent = user.email || user.displayName || '로그인됨';
+    if (!_cloudStarted) {
+      _cloudStarted = true;
+      // 1) 2.x → 3.0 이사: 옛 shared 일정을 내 칸으로 1회 가져오기
+      if (typeof window.cloudMigrateFromShared === 'function') {
+        const moved = await window.cloudMigrateFromShared();
+        if (moved) { window.onCloudData(moved); showToast('기존 일정을 내 계정으로 가져왔습니다'); }
+      }
+      // 2) 내 칸 실시간 동기화 시작
+      if (typeof window.cloudListen === 'function') window.cloudListen();
+      // 2-b) 메모 실시간 동기화 시작 (일정과 독립)
+      if (typeof window.cloudListenMemo === 'function') window.cloudListenMemo();
+    }
+  } else {
+    // 로그아웃 상태
+    _cloudStarted = false;
+    if (typeof window.cloudStop === 'function') window.cloudStop();
+    if ($('accountEmail')) $('accountEmail').textContent = '—';
+    showAuthGate();
+  }
+};
+
+// 로그인 실패 안내
+window.onAuthError = function() { showToast('로그인에 실패했습니다. 다시 시도해 주세요.'); };
+
+// 버튼 연결
+$('googleSignInBtn').onclick = () => { if (window.authSignIn) window.authSignIn(); };
+
+/* ===== 인앱 브라우저(카톡·인스타·페북 등) 감지 + 브라우저로 열기 =====
+   인앱 브라우저에서는 구글 로그인이 막히므로, 감지되면 안내 박스를 띄우고
+   진짜 브라우저(크롬)로 빠져나갈 수단을 준다.
+   - 안드로이드: intent:// 스킴으로 크롬을 직접 띄움(대부분 성공)
+   - 그 외/실패: '주소 복사' 후 사용자가 브라우저에 붙여넣게 안내 */
+(function () {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  // 대표적인 인앱 브라우저 신호들
+  const inApp = /kakaotalk|instagram|fban|fbav|fb_iab|line\/|naver|daum|band|everytimeapp|whale|snapchat|wechat|micromessenger/.test(ua);
+  const isAndroid = /android/.test(ua);
+
+  if (!inApp) return;  // 일반 브라우저면 아무것도 안 함
+
+  const notice = $('inappNotice');
+  if (notice) notice.classList.add('show');
+
+  // 현재 주소
+  const url = location.href;
+
+  // 안드로이드: intent로 크롬 강제 실행
+  function openInChrome() {
+    // [Rev611] 오프라인이면 크롬으로 점프해봤자 크롬이 주소를 못 받아와
+    // 에러 페이지만 뜨고 멀쩡한 인앱 화면만 잃는다. 점프 대신 공룡 안내
+    // 모달을 띄우고, 확인을 누르면 그냥 닫는다(아무 동작도 하지 않음).
+    if (navigator.onLine === false) {
+      showOfflineModal();
+      return;
+    }
+    if (isAndroid) {
+      // https:// 를 떼고 intent 스킴으로 — 크롬에서 열도록 지정
+      const noScheme = url.replace(/^https?:\/\//, '');
+      location.href = 'intent://' + noScheme +
+        '#Intent;scheme=https;package=com.android.chrome;end';
+    } else {
+      // 아이폰 등은 강제 실행이 막혀 있어 주소 복사로 유도
+      copyUrl();
+      showToast('주소가 복사됐어요. Safari·크롬 주소창에 붙여넣어 주세요.');
+    }
+  }
+
+  function copyUrl() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => showToast('주소가 복사됐어요. 브라우저에 붙여넣어 주세요.'),
+        () => fallbackCopy()
+      );
+    } else {
+      fallbackCopy();
+    }
+  }
+  function fallbackCopy() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      showToast('주소가 복사됐어요. 브라우저에 붙여넣어 주세요.');
+    } catch(e) {
+      showToast('주소 복사가 안 돼요. 메뉴(⋮)에서 "다른 브라우저로 열기"를 눌러 주세요.');
+    }
+  }
+
+  if ($('openBrowserBtn')) $('openBrowserBtn').onclick = openInChrome;
+  if ($('copyUrlBtn')) $('copyUrlBtn').onclick = copyUrl;
+})();
+/* ===== /인앱 브라우저 처리 ===== */
+
+// [Rev611] 오프라인 모달 확인 버튼 — 인앱 감지와 무관하게 항상 연결.
+if ($('offlineOkBtn')) $('offlineOkBtn').onclick = hideOfflineModal;
+
+
+$('signOutBtn').onclick = () => {
+  if (!confirm('로그아웃할까요?')) return;
+  closeSheet('settingsSheet');
+  if (window.authSignOut) window.authSignOut();
+};
+
+// Firebase 준비 전 대비: 모듈이 늦게 오면 onAuthChange가 그 뒤 호출되므로,
+// 준비 신호만 기다렸다가 혹시 인증 콜백이 아직이면 스플래시를 유지한다.
+whenCloudReady(() => { /* onAuthStateChanged가 곧 onAuthChange를 호출함 */ });
+
+/* ---- 폰 뒤로가기(하드웨어/제스처) 지원 ----
+   검색 목록을 history에 한 단계 쌓는다. 검색 목록에서 항목을 눌러 수정
+   화면으로 가면 그 표시는 그대로 유지되므로, 폰 뒤로가기 한 번이
+   상황에 따라 (수정→목록 복귀) 또는 (목록→닫힘)으로 동작한다. */
+function pushNav() {
+  if (_navActive) return;   // 이미 쌓여 있으면 중복으로 더 쌓지 않음
+  _navActive = true;
+  history.pushState({ cal: 1 }, '');
+}
+window.addEventListener('popstate', () => {
+  if (!_navActive) return;
+  _navActive = false;
+  // 메모 이력창이 열려 있으면 → 그것부터 닫기 (메모장은 유지)
+  if ($('memoHistory').classList.contains('open')) {
+    closeMemoHistory();
+    pushNav();   // 메모장은 아직 열려 있으니 뒤로가기 단계를 다시 쌓아둠
+    return;
+  }
+  // 메모장이 열려 있으면 → 닫기(내용 저장·이력 반영)
+  if ($('memoPanel').classList.contains('open')) {
+    _navActive = false;   // closeMemo가 history.back을 또 부르지 않도록 먼저 끔
+    closeMemo();
+    return;
+  }
+  // 검색을 거쳐 들어온 수정 화면이 열려 있으면 → 검색 목록으로 복귀
+  if ($('editSheet').classList.contains('open') && cameFromSearch) {
+    cameFromSearch = false;
+    closeSheet('editSheet');
+    if (lastSearchQuery) setTimeout(() => showSearchResults(lastSearchQuery), 60);
+    return;
+  }
+  // 검색 목록이 열려 있으면 → 닫기
+  if ($('searchSheet').classList.contains('open')) {
+    closeSheet('searchSheet');
+    // 검색을 설정에서 시작했다면 설정 시트로 되돌아간다(닫기 버튼과 동일 동작).
+    if (searchFromSettings) {
+      searchFromSettings = false;
+      openSettings();
+    }
+  }
+});
+// re-render on rotation / window resize so font size & lane count match new cell width
+let _rzTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_rzTimer);
+  _rzTimer = setTimeout(render, 150);
+});
+window.addEventListener('orientationchange', () => setTimeout(render, 200));
+</script>
+</body>
+</html>
