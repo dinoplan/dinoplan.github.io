@@ -2,7 +2,43 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.21  ·  파일명: Index_Rev621
+  Release Version 6.23  ·  파일명: Index_Rev623
+  ============================================
+  [Rev623 변경점 — 일정·메모 내보내기를 앱에서도 동작하게]
+    · 증상: 기존 exportBackup은 Blob + <a download> 방식이라 웹/PC 브라우저
+      에서만 동작하고, Capacitor 앱(WebView)에서는 다운로드가 먹지 않아
+      내보내기가 사실상 불가했다.
+    · 해결: exportBackup을 환경별로 분기.
+      - 웹/PC: 기존 Blob + <a download> 그대로(_exportBackupWeb).
+      - 앱: @capacitor/filesystem 으로 캐시에 .json을 쓰고
+        @capacitor/share 로 공유 시트(카톡·드라이브·메일 등)를 띄워
+        사용자가 원하는 곳에 백업을 내보낸다(_exportBackupApp).
+    · 안전장치: 플러그인이 없거나(미설치) 공유 실패 시 조용히 웹 방식으로
+      폴백. 사용자가 공유를 취소하면 에러 무시(토스트 안 띄움).
+      → 플러그인 빌드 전에도 기존 동작 100% 유지.
+    · 가져오기(importBackup)는 파일 선택 input이 앱에서도 동작하므로 변경 없음.
+    · 사전 준비(PC): npm install @capacitor/filesystem @capacitor/share
+      후 npx cap sync. (admob·firebase·@capacitor/app 와 함께 잡혀야 함)
+    · 설정창 버전 표기 Ver.622→623 갱신.
+  ============================================
+  [Rev622 변경점 — 공휴일을 연도별(2026~2031) 정확 데이터로 교체]
+    · 증상: 기존 HOLIDAYS는 키가 '월-일'뿐이라 연도를 구분하지 못했다.
+      그 결과 2026년에만 맞는 날짜(특히 음력 설날·추석·부처님오신날과
+      대체공휴일·지방선거)가 2027년 이후에도 매년 같은 양력 날짜에 잘못
+      표시됐다. (음력 공휴일은 해마다 양력 날짜가 달라지므로 치명적)
+    · 해결: 공휴일 데이터를 두 갈래로 재구성.
+      - FIXED_HOLIDAYS: 매년 동일한 양력 고정 공휴일(신정·삼일절·노동절·
+        어린이날·현충일·제헌절·광복절·개천절·한글날·성탄절). 'M-D' 키.
+      - LUNAR_HOLIDAYS: 음력 기반(설날 연휴·추석 연휴·부처님오신날)을
+        2026~2031 6년치 'YYYY-M-D'로 정확히 박음(음력→양력 변환 확정값).
+      holidayName(d)이 연도까지 보고 둘을 합쳐 판정. 같은 날 충돌 시
+      명절(음력) 이름을 우선.
+    · 정책: '대체공휴일·선거일·임시공휴일'은 그해 결정/법 개정 여지가 있어
+      의도적으로 제외. 발표되면 다음 버전에서 갱신한다. (사용자도 그해
+      확정 사항임을 인지하는 영역이라 미표시가 문제되지 않음)
+    · 새로 공휴일이 된 노동절(5/1)·제헌절(7/17)을 양력 고정에 포함.
+    · 지원 범위 상수 HOLIDAY_MIN_YEAR(2026)·HOLIDAY_MAX_YEAR(2031) 추가.
+    · 설정창에 '공휴일 2026~2031 반영' 표기 + 버전 Ver.621→622 갱신.
   ============================================
   [Rev621 변경점 — 업무 배경색 자동지정 순환 버그 해결]
     · 증상: 새 업무 일정 추가 시 그 달에 9색(c0~c8)이 모두 쓰이고 나면,
@@ -1720,7 +1756,7 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">Ver.621</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.623</div>
 </div>
 
 <!-- search result sheet -->
@@ -2324,21 +2360,73 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 const KMONTH = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 const KDOW = ['일','월','화','수','목','금','토'];
 
-// 2026 대한민국 공휴일 (정부 월력요항 기준). key: 'M-D'
-const HOLIDAYS = {
+// [Rev622] 대한민국 공휴일 — 2026~2031 (6년치).
+// 정책: 규칙으로 미리 확정되는 '본 공휴일'만 수록한다.
+//   · 양력 고정 공휴일은 매년 같으므로 FIXED_HOLIDAYS 한 곳에서 처리.
+//   · 음력 공휴일(설날·추석·부처님오신날)은 해마다 양력 날짜가 달라
+//     연도별로 정확히 박는다(음력→양력 변환으로 확정한 값).
+//   · '대체공휴일'·'선거일'·'임시공휴일'은 그해에 정해지거나 법 개정 여지가
+//     있어 의도적으로 제외(발표되면 다음 버전에서 갱신).
+// 지원 범위: HOLIDAY_MIN_YEAR ~ HOLIDAY_MAX_YEAR. 이 범위 밖 연도는 음력
+//   공휴일이 안 떠 부정확할 수 있어, 화면(설정)에 반영 범위를 표기한다.
+const HOLIDAY_MIN_YEAR = 2026;
+const HOLIDAY_MAX_YEAR = 2031;
+
+// 매년 동일한 양력 고정 공휴일. key: 'M-D'
+const FIXED_HOLIDAYS = {
   '1-1': '신정',
-  '2-16': '설날연휴', '2-17': '설날', '2-18': '설날연휴',
-  '3-1': '삼일절', '3-2': '대체공휴일',
+  '3-1': '삼일절',
+  '5-1': '노동절',
   '5-5': '어린이날',
-  '5-24': '부처님오신날', '5-25': '대체공휴일',
-  '6-3': '지방선거', '6-6': '현충일',
-  '8-15': '광복절', '8-17': '대체공휴일',
-  '9-24': '추석연휴', '9-25': '추석', '9-26': '추석연휴',
-  '10-3': '개천절', '10-5': '대체공휴일', '10-9': '한글날',
+  '6-6': '현충일',
+  '7-17': '제헌절',
+  '8-15': '광복절',
+  '10-3': '개천절',
+  '10-9': '한글날',
   '12-25': '성탄절'
 };
+
+// 음력 기반(연도별로 양력 날짜가 다름). key: 'YYYY-M-D'
+// 설날·추석은 연휴 3일(전날·당일·다음날), 부처님오신날은 당일 1일.
+const LUNAR_HOLIDAYS = {
+  // 2026 — 이미 확정된 해. 본 공휴일 + 그해 확정된 대체공휴일·지방선거까지 모두 반영.
+  '2026-2-16':'설날연휴','2026-2-17':'설날','2026-2-18':'설날연휴',
+  '2026-3-2':'대체공휴일',
+  '2026-5-24':'부처님오신날','2026-5-25':'대체공휴일',
+  '2026-6-3':'지방선거',
+  '2026-8-17':'대체공휴일',
+  '2026-9-24':'추석연휴','2026-9-25':'추석','2026-9-26':'추석연휴',
+  '2026-10-5':'대체공휴일',
+  // 2027 이후 — 본 공휴일만. 대체공휴일·선거·임시공휴일은 확정 시 다음 버전에서 반영.
+  // 2027
+  '2027-2-6':'설날연휴','2027-2-7':'설날','2027-2-8':'설날연휴',
+  '2027-5-13':'부처님오신날',
+  '2027-9-14':'추석연휴','2027-9-15':'추석','2027-9-16':'추석연휴',
+  // 2028
+  '2028-1-26':'설날연휴','2028-1-27':'설날','2028-1-28':'설날연휴',
+  '2028-5-2':'부처님오신날',
+  '2028-10-2':'추석연휴','2028-10-3':'추석','2028-10-4':'추석연휴',
+  // 2029
+  '2029-2-12':'설날연휴','2029-2-13':'설날','2029-2-14':'설날연휴',
+  '2029-5-20':'부처님오신날',
+  '2029-9-21':'추석연휴','2029-9-22':'추석','2029-9-23':'추석연휴',
+  // 2030
+  '2030-2-2':'설날연휴','2030-2-3':'설날','2030-2-4':'설날연휴',
+  '2030-5-9':'부처님오신날',
+  '2030-9-11':'추석연휴','2030-9-12':'추석','2030-9-13':'추석연휴',
+  // 2031
+  '2031-1-22':'설날연휴','2031-1-23':'설날','2031-1-24':'설날연휴',
+  '2031-5-28':'부처님오신날',
+  '2031-9-30':'추석연휴','2031-10-1':'추석','2031-10-2':'추석연휴'
+};
+
 function holidayName(d) {
-  return HOLIDAYS[(d.getMonth()+1) + '-' + d.getDate()] || null;
+  const y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
+  // 음력 공휴일(연도별) 우선 — 추석/개천절 등 같은 날 충돌 시 명절 이름 우선
+  const lunar = LUNAR_HOLIDAYS[y + '-' + m + '-' + day];
+  if (lunar) return lunar;
+  // 양력 고정 공휴일(매년 동일)
+  return FIXED_HOLIDAYS[m + '-' + day] || null;
 }
 // 화면 표시용: 공휴일 토글이 꺼져 있으면 공휴일 이름을 숨긴다(데이터엔 영향 없음)
 function holidayShown(d) {
@@ -3348,18 +3436,75 @@ function openSettings() {
   showSheet('settingsSheet');
   navOpen('settingsSheet');   // [Rev617] 뒤로가기 한 단계
 }
-function exportBackup() {
-  const data = JSON.stringify({ app: 'workcal', version: 2, exportedAt: Date.now(), events, memo: memoText, memoHist: memoHistory }, null, 2);
+// [Rev623] 내보내기를 앱/웹 환경에 맞게 분기.
+//   · 웹/PC 브라우저: 기존 방식(Blob + <a download>)으로 다운로드 폴더에 저장.
+//   · 앱(Capacitor WebView): <a download>가 동작하지 않으므로, Filesystem으로
+//     캐시에 파일을 쓴 뒤 Share 플러그인으로 공유 시트(카톡·드라이브·메일 등)를
+//     띄워 사용자가 원하는 곳에 백업을 내보내게 한다.
+//   · 플러그인이 없으면(미설치) 조용히 웹 방식으로 폴백 → 빌드 안 해도 안전.
+//   · 사전 준비(PC): npm install @capacitor/filesystem @capacitor/share 후 npx cap sync.
+function _isNativeAppForExport() {
+  return !!(window.Capacitor &&
+            typeof window.Capacitor.isNativePlatform === 'function' &&
+            window.Capacitor.isNativePlatform());
+}
+function _exportFileName() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return '캘린더백업_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.json';
+}
+function _exportBackupWeb(data, fname) {
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const d = new Date();
-  const pad = n => String(n).padStart(2,'0');
   a.href = url;
-  a.download = '캘린더백업_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.json';
+  a.download = fname;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   showToast('일정·메모 내보내기 완료되었습니다');
+}
+async function _exportBackupApp(data, fname) {
+  const FS = window.Capacitor?.Plugins?.Filesystem;
+  const Share = window.Capacitor?.Plugins?.Share;
+  // 플러그인 미설치 시 웹 방식으로 폴백
+  if (!FS || !Share) { _exportBackupWeb(data, fname); return; }
+  try {
+    // 캐시 디렉터리에 파일 쓰기 (UTF-8)
+    const writeRes = await FS.writeFile({
+      path: fname,
+      data: data,
+      directory: 'CACHE',
+      encoding: 'utf8'
+    });
+    // 방금 쓴 파일의 URI 얻기 (writeFile이 uri를 안 주는 버전 대비 getUri 보강)
+    let fileUri = writeRes && writeRes.uri;
+    if (!fileUri) {
+      const uriRes = await FS.getUri({ path: fname, directory: 'CACHE' });
+      fileUri = uriRes && uriRes.uri;
+    }
+    await Share.share({
+      title: '캘린더 백업',
+      text: 'DinoPlan 일정·메모 백업 파일입니다.',
+      url: fileUri,
+      dialogTitle: '백업 파일 내보내기'
+    });
+    showToast('내보내기 공유를 시작합니다');
+  } catch (err) {
+    // 사용자가 공유를 취소하면 에러로 들어오는 플러그인이 있어, 취소는 조용히 무시
+    const msg = (err && (err.message || String(err))) || '';
+    if (/cancel/i.test(msg)) return;
+    // 그 외 실패 시 웹 방식으로 폴백 시도
+    _exportBackupWeb(data, fname);
+  }
+}
+function exportBackup() {
+  const data = JSON.stringify({ app: 'workcal', version: 2, exportedAt: Date.now(), events, memo: memoText, memoHist: memoHistory }, null, 2);
+  const fname = _exportFileName();
+  if (_isNativeAppForExport()) {
+    _exportBackupApp(data, fname);
+  } else {
+    _exportBackupWeb(data, fname);
+  }
 }
 function importBackup(file) {
   const reader = new FileReader();
