@@ -983,7 +983,10 @@
     /* 시트가 화면을 꽉 덮지 않도록 위쪽 공간을 항상 남긴다.
        (요일줄 + 1주차 첫 줄이 보여서, 그 부분을 탭해 달력으로 바로 나갈 수 있음)
        내용이 이보다 길면 시트 안에서 스크롤된다. */
-    max-height: 72dvh; overflow-y: auto;
+    /* [Rev625] 광고가 있으면 배너가 아래를 먹어 시트 맨 아래 버튼(삭제 등)이
+       72dvh 밖으로 밀려 잘렸다. 광고 높이(--ad-h)만큼 시트 최대치를 늘려
+       그 공간에 버튼이 들어오게 한다. 광고 없으면 --ad-h=0이라 기존과 동일. */
+    max-height: calc(72dvh + var(--ad-h, 0px)); overflow-y: auto;
     overscroll-behavior: contain; /* 시트 스크롤이 끝에 닿아도 뒤 달력으로 전달되지 않게 */
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y; /* 시트 안에서는 세로 스크롤만, 가로/뒤로 전달 방지 */
@@ -1043,6 +1046,24 @@
     border-radius: 10px; padding: 9px 12px; font-size: 15px; font-family: inherit;
   }
   textarea { resize: vertical; min-height: 120px; }
+  /* [Rev624] PC(넓은 화면)에서만 '새 일정' 메모칸을 10줄(≈240px)로 넓힌다.
+     모바일 웹은 차단, 앱(WebView)은 폰 폭이라 600px 미만 → 걸리지 않음.
+     #fMemo만 지정해 메모장 등 다른 textarea엔 영향 없음. 시트는
+     max-height:72dvh 안에서 내용만큼 위로 자라고, 넘치면 시트 내부 스크롤
+     (저장/취소 버튼은 시트 하단에 그대로 유지). */
+  @media (min-width: 600px) {
+    #fMemo { min-height: 240px; }
+  }
+  /* [Rev625] 앱에서 광고가 없을 때(프리미엄)만 새 일정 메모칸을 2줄 더(≈168px).
+     광고가 사라져 아래에 여유가 생긴 만큼 메모를 더 크게 쓸 수 있게 한다.
+     app-noad는 앱+프리미엄일 때만 html에 붙으므로 웹/PC·광고 있는 앱엔 영향 없음. */
+  .app-noad #fMemo { min-height: 168px; }
+  /* [Rev626] 프리미엄(광고 없음)은 메모칸이 커져 시트가 길어지는데, '일정 수정'은
+     맨 아래 '이 일정 삭제' 버튼까지 있어 기본 max(72dvh)로는 삭제 버튼이 밀렸다.
+     광고가 없어 화면 아래가 비므로, 프리미엄일 때만 시트 최대 높이를 80dvh로
+     넓혀 커진 메모칸 + 삭제 버튼이 함께 들어오게 한다. 일반(광고) 사용자는
+     이 규칙이 적용되지 않아 기존과 완전히 동일. */
+  .app-noad .sheet { max-height: 80dvh; }
   .input-mic { position: relative; }
   .input-mic input, .input-mic textarea { padding-right: 44px; }
   .mic-btn {
@@ -1756,7 +1777,13 @@
   <label>계정</label>
   <div class="set-row"><span id="accountEmail">—</span></div>
   <button class="btn ghost block" id="signOutBtn">로그아웃</button>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.623</div>
+  <!-- [Rev625] PC(웹) 주소 안내 — 표시 전용(링크 아님). 폰에서 눌러 열면
+       모바일 웹이라 차단 화면이 뜨므로, 클릭 불가한 안내 배지로만 보여준다. -->
+  <div style="margin-top:14px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-2);">
+    <span style="font-weight:700;">🖥️ PC 웹</span>
+    <span style="font-family:inherit; font-weight:600; color:var(--text); background:var(--surface); border:0.5px solid var(--line-strong); border-radius:8px; padding:5px 10px; letter-spacing:0.2px;">dinoplan.github.io</span>
+  </div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.626</div>
 </div>
 
 <!-- search result sheet -->
@@ -1993,6 +2020,10 @@ function refreshPremiumUI() {
 function applyPremium(on, push) {
   isPremium = (on === true);
   try { localStorage.setItem(PREMIUM_KEY, isPremium ? '1' : '0'); } catch(e) {}
+  // [Rev625] 앱에서 광고가 없는 상태(프리미엄)일 때만 html에 'app-noad'를 붙인다.
+  //   → 광고가 사라져 아래에 여유가 생기므로, 새 일정 메모칸을 2줄 더 넓히는
+  //     CSS(#fMemo)가 이 클래스로만 적용된다. 웹/PC나 광고 있는 앱엔 영향 없음.
+  document.documentElement.classList.toggle('app-noad', isPremium && isAppEnv());
   refreshAdBar();
   refreshPremiumUI();
   if (push && window.cloudReady && typeof window.cloudSavePremium === 'function') {
@@ -2212,6 +2243,8 @@ async function restoreSubscription() {
 // 앱 시작 시 로컬에 기억된 프리미엄 상태를 먼저 반영(클라우드는 로그인 후 따라옴)
 function initPremium() {
   try { isPremium = (localStorage.getItem(PREMIUM_KEY) === '1'); } catch(e) { isPremium = false; }
+  // [Rev625] 초기 로드 때도 앱+프리미엄이면 app-noad 반영 (메모칸 2줄 더 CSS용)
+  document.documentElement.classList.toggle('app-noad', isPremium && isAppEnv());
   refreshAdBar();
   refreshPremiumUI();
   refreshSubUI();
