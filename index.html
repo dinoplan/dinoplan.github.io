@@ -1783,7 +1783,7 @@
     <span style="font-weight:700;">🖥️ PC 웹</span>
     <span style="font-family:inherit; font-weight:600; color:var(--text); background:var(--surface); border:0.5px solid var(--line-strong); border-radius:8px; padding:5px 10px; letter-spacing:0.2px;">dinoplan.github.io</span>
   </div>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.626</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.628</div>
 </div>
 
 <!-- search result sheet -->
@@ -2646,11 +2646,14 @@ function makeWeekendCell(sat, sun, todayIso) {
       half.appendChild(hn);
     }
 
-    // Only single-day events that actually belong to this weekend day.
-    // Multi-day events started on weekdays skip the weekend.
-    // (개인일정 숨김이면 달력에서 제외)
+    // [Rev628] 이전엔 "시작=종료=그날"인 단일일 일정만 주말 칸에 표시했다.
+    //   그래서 주말에 걸친 기간 일정(주요/개인/휴일)이 평일 막대(주말 제외)에도,
+    //   주말 칸에도 안 떠 화면에서 사라졌다(토~일이면 완전 실종, 토일월이면 월만).
+    //   이제 이 날짜에 걸치는 기간 일정도 포함한다. 주말은 화살표 막대 대신
+    //   날짜별로 제목만 적는 방식(기존 단일일과 동일 표기). 업무 일정은 애초에
+    //   주말 저장이 막혀 있어 여기 올 일이 없다.
     const di = iso(d);
-    const dayEvents = events.filter(e => e.start === di && e.end === di
+    const dayEvents = events.filter(e => e.start <= di && e.end >= di
       && isVisibleType(e));
     if (dayEvents.length) {
       const wevs = document.createElement('div');
@@ -2851,7 +2854,12 @@ function openDay(d) {
       titleEl.style.color = tcol;
       if (range) { const r = row.querySelector('.range'); r.textContent = range; r.style.color = tcol; r.style.opacity = '0.7'; }
       if (e.memo) { const m = row.querySelector('.memo'); m.textContent = e.memo; m.style.color = tcol; m.style.opacity = '0.7'; }
-      row.addEventListener('click', () => openEdit(e));
+      // [Rev627] 검색과 동일하게, 상세를 열기 직전 그날 목록을 화면에서만
+      //   숨긴다(.open 제거, 스택엔 유지). 뒤로가기/취소 시 NAV_CLOSERS가 복원.
+      row.addEventListener('click', () => {
+        $('daySheet').classList.remove('open');
+        openEdit(e);
+      });
       wrap.appendChild(row);
     });
   }
@@ -3126,7 +3134,7 @@ $('titleBtn').onclick = openPicker;
 $('pickerScrim').onclick = closePicker;
 $('backToSearch').onclick = backToSearchList;
 $('addBtn').onclick = () => { lastSelectedDate = lastSelectedDate || new Date(); openEdit(null); };
-$('addOnDay').onclick = () => openEdit(null);
+$('addOnDay').onclick = () => { $('daySheet').classList.remove('open'); openEdit(null); };
 // 업무일정 표시/숨김 토글
 function syncWorkToggle() {
   $('workToggle').classList.toggle('off', !showWork);
@@ -4041,6 +4049,14 @@ const NAV_CLOSERS = {
     const fromSearch = cameFromSearch;
     cameFromSearch = false;
     _bareCloseSheet('editSheet');
+    // [Rev627] 아래에 그날 목록(daySheet)이 스택에 남아 있으면 다시 노출한다.
+    //   검색 목록 복원과 완전히 같은 방식(.open 토글). 검색 경로엔 daySheet가
+    //   스택에 없으므로 자연히 건너뛴다.
+    if (!fromSearch && navStack.lastIndexOf('daySheet') !== -1) {
+      $('daySheet').classList.add('open');
+      $('scrim').classList.add('open');
+      lockBack();
+    }
     if (fromSearch && lastSearchQuery) {
       // 검색 시트를 다시 띄우되, 스택엔 이미 searchSheet가 남아 있으므로
       // 재푸시하지 않고 표시만 복원한다.
