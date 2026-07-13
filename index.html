@@ -2646,15 +2646,18 @@ function makeWeekendCell(sat, sun, todayIso) {
       half.appendChild(hn);
     }
 
-    // [Rev628] 이전엔 "시작=종료=그날"인 단일일 일정만 주말 칸에 표시했다.
-    //   그래서 주말에 걸친 기간 일정(주요/개인/휴일)이 평일 막대(주말 제외)에도,
-    //   주말 칸에도 안 떠 화면에서 사라졌다(토~일이면 완전 실종, 토일월이면 월만).
-    //   이제 이 날짜에 걸치는 기간 일정도 포함한다. 주말은 화살표 막대 대신
-    //   날짜별로 제목만 적는 방식(기존 단일일과 동일 표기). 업무 일정은 애초에
-    //   주말 저장이 막혀 있어 여기 올 일이 없다.
+    // [Rev628] 주말 칸에는 그날 걸치는 기간 일정도 표시한다(이전엔 단일일만 떠서
+    //   주말에 걸친 주요/개인/휴일 기간 일정이 사라졌음). 단, '업무' 종류는 단일·
+    //   기간 구분 없이 주말에 절대 표시하지 않는다(평일에서 시작해 주말로 걸친
+    //   업무 기간 일정이 새어 나오던 부작용 차단). 주말 표시 대상은 주요·개인·휴일.
     const di = iso(d);
-    const dayEvents = events.filter(e => e.start <= di && e.end >= di
-      && isVisibleType(e));
+    const dayEvents = events.filter(e => {
+      if (!(e.start <= di && e.end >= di)) return false;
+      if (!isVisibleType(e)) return false;
+      const isWork = (!e.type || e.type === 'work');
+      if (isWork) return false;   // 업무는 주말에서 제외(단일·기간 모두)
+      return true;
+    });
     if (dayEvents.length) {
       const wevs = document.createElement('div');
       wevs.className = 'wevs';
@@ -2827,15 +2830,18 @@ function layoutEvents(week, weekDates, todayIso) {
 function openDay(d) {
   lastSelectedDate = new Date(d);
   $('dayTitle').textContent = (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + KDOW[d.getDay()] + ')';
+  // [Rev628] 그날 걸치는 일정을 보여준다. 평일은 전부, 주말은 달력 칸과 동일하게
+  //   '업무' 종류를 단일·기간 구분 없이 제외한다(업무는 주말에 뜨면 안 됨).
+  //   주말엔 주요·개인·휴일만 표시(단일/기간 모두).
   const dow = d.getDay();
   const isWeekend = (dow === 0 || dow === 6);
-  const di = iso(d);
-  // Weekend: only single-day events that belong to this day.
-  // Weekday: all events overlapping this day (incl. multi-day bars).
-  const list = isWeekend
-    ? events.filter(e => e.start === di && e.end === di)
-        .sort((a,b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))
-    : eventsOnDay(d);
+  let list = eventsOnDay(d);
+  if (isWeekend) {
+    list = list.filter(e => {
+      const isWork = (!e.type || e.type === 'work');
+      return !isWork;   // 업무는 주말에서 제외(단일·기간 모두)
+    });
+  }
   const wrap = $('dayList');
   wrap.innerHTML = '';
   if (list.length === 0) {
