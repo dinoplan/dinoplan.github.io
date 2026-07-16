@@ -2,7 +2,26 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.23  ·  파일명: Index_Rev623
+  Release Version 6.30  ·  파일명: Index_Rev630
+  ============================================
+  [Rev630 변경점 — 시작일·종료일을 월~일 순서 커스텀 달력으로]
+    · 증상: 일정 추가/수정의 시작일·종료일이 OS 기본 date 위젯이라, 탭하면
+      뜨는 달력의 요일 순서가 일~토(OS 결정)로 고정돼 바꿀 수 없었다.
+    · 해결: 값은 hidden input(#fStart/#fEnd)에 기존과 동일한 ISO(yyyy-mm-dd)로
+      그대로 저장하고, 화면 표시·날짜 선택만 직접 만든 팝오버 달력(#calPop)이
+      담당한다. 달력 요일 헤더를 월·화·수·목·금·토·일 순서로 배치하고, 첫 주
+      앞쪽 빈칸을 (getDay()+6)%7로 계산해 월요일 시작에 맞춘다.
+    · 표시 형식은 기존 OS 위젯과 동일한 'yyyy. mm. dd.' 유지(fmtDateField).
+    · 토=파랑(--sat)·일/공휴일=빨강(--sun), 오늘 점 표시, 선택일 강조.
+      공휴일 판정은 기존 holidayName()을 재사용.
+    · 기존 로직 무변경: openEdit/saveEvent/syncWeekendRule/syncColorsEnabled는
+      여전히 .value(ISO)만 읽고 쓴다. openEdit의 값 대입만 setDateField()로
+      바꿔 버튼 표시가 함께 갱신되게 했고, 날짜 확정 시 syncWeekendRule/
+      syncColorsEnabled를 직접 호출해 주말 업무 차단·배경색 규칙을 유지.
+    · 뒤로가기: 팝오버는 nav 스택에 태우지 않는 가벼운 오버레이라, _handleBack
+      과 웹 popstate 진입부에서 팝오버가 열려 있으면 그것부터 닫도록 처리(웹은
+      history 한 칸 재푸시로 스택 정합성 유지). 바깥 배경 탭·'닫기'로도 닫힘.
+    · 설정창 버전 표기 Ver.629→630 갱신.
   ============================================
   [Rev623 변경점 — 일정·메모 내보내기를 앱에서도 동작하게]
     · 증상: 기존 exportBackup은 Blob + <a download> 방식이라 웹/PC 브라우저
@@ -1045,6 +1064,77 @@
     width: 100%; border: 0.5px solid var(--line-strong); background: var(--bg); color: var(--text);
     border-radius: 10px; padding: 9px 12px; font-size: 15px; font-family: inherit;
   }
+  /* [Rev630] 날짜 선택 필드 — OS 기본 date 위젯 대신, 탭하면 월~일 커스텀 달력을 연다.
+     input[type=date]와 동일한 외형을 유지해 기존 레이아웃과 자연스럽게 맞춘다. */
+  .date-field {
+    width: 100%; border: 0.5px solid var(--line-strong); background: var(--bg); color: var(--text);
+    border-radius: 10px; padding: 9px 12px; font-size: 15px; font-family: inherit;
+    text-align: left; cursor: pointer; line-height: 1.3; -webkit-tap-highlight-color: transparent;
+  }
+  .date-field:active { opacity: .75; }
+  .date-field .date-txt { color: var(--text); }
+  /* 팝오버 오버레이 — editSheet(z-index 20) 위에 뜬다 */
+  .cal-pop {
+    position: fixed; inset: 0; z-index: 40; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.32); padding: 20px;
+  }
+  .cal-pop.open { display: flex; }
+  .cal-box {
+    width: 100%; max-width: 340px; background: var(--bg);
+    border: 0.5px solid var(--line-strong); border-radius: 16px;
+    padding: 14px 14px 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+  }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .cal-nav {
+    background: transparent; border: none; color: var(--text-2); cursor: pointer;
+    padding: 4px 6px; border-radius: 8px; display: flex; align-items: center;
+  }
+  .cal-nav:active { opacity: .6; }
+  .cal-title {
+    background: transparent; border: none; color: var(--text);
+    font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+    padding: 4px 10px; border-radius: 8px;
+  }
+  .cal-title:active { opacity: .6; }
+  .cal-dow {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+    margin-bottom: 4px;
+  }
+  .cal-dow span {
+    text-align: center; font-size: 11px; font-weight: 700; color: var(--text-2);
+    padding: 4px 0;
+  }
+  .cal-dow .csat { color: var(--sat); }
+  .cal-dow .csun { color: var(--sun); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-cell {
+    aspect-ratio: 1 / 1; border: none; background: transparent; cursor: pointer;
+    border-radius: 10px; font-family: inherit; font-size: 14px; color: var(--text);
+    display: flex; align-items: center; justify-content: center; position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-cell.empty { visibility: hidden; cursor: default; }
+  .cal-cell.sat { color: var(--sat); }
+  .cal-cell.sun, .cal-cell.holi { color: var(--sun); }
+  .cal-cell.today { font-weight: 800; }
+  .cal-cell.today::after {
+    content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+  }
+  .cal-cell.sel {
+    background: var(--accent); color: #fff; font-weight: 800;
+  }
+  .cal-cell.sel.sat, .cal-cell.sel.sun, .cal-cell.sel.holi { color: #fff; }
+  .cal-cell.sel.today::after { background: #fff; }
+  .cal-cell:not(.empty):not(.sel):active { background: var(--line); }
+  .cal-foot { display: flex; justify-content: space-between; margin-top: 10px; }
+  .cal-today, .cal-cancel {
+    background: transparent; border: 0.5px solid var(--line-strong); color: var(--text);
+    border-radius: 10px; padding: 7px 16px; font-size: 13px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  .cal-today:active, .cal-cancel:active { opacity: .7; }
   textarea { resize: vertical; min-height: 120px; }
   /* [Rev624] PC(넓은 화면)에서만 '새 일정' 메모칸을 10줄(≈240px)로 넓힌다.
      모바일 웹은 차단, 앱(WebView)은 폰 폭이라 600px 미만 → 걸리지 않음.
@@ -1783,7 +1873,7 @@
     <span style="font-weight:700;">🖥️ PC 웹</span>
     <span style="font-family:inherit; font-weight:600; color:var(--text); background:var(--surface); border:0.5px solid var(--line-strong); border-radius:8px; padding:5px 10px; letter-spacing:0.2px;">dinoplan.github.io</span>
   </div>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.629</div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.630</div>
 </div>
 
 <!-- search result sheet -->
@@ -1822,8 +1912,16 @@
     <button type="button" class="mic-btn" id="micTitle" data-target="fTitle" aria-label="음성 입력" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
   </div>
   <div class="row2">
-    <div><label>시작일</label><input type="date" id="fStart" /></div>
-    <div><label>종료일</label><input type="date" id="fEnd" /></div>
+    <div>
+      <label>시작일</label>
+      <input type="hidden" id="fStart" />
+      <button type="button" class="date-field" id="fStartBtn" data-target="fStart" aria-label="시작일 선택"><span class="date-txt"></span></button>
+    </div>
+    <div>
+      <label>종료일</label>
+      <input type="hidden" id="fEnd" />
+      <button type="button" class="date-field" id="fEndBtn" data-target="fEnd" aria-label="종료일 선택"><span class="date-txt"></span></button>
+    </div>
   </div>
   <label>메모 (선택)</label>
   <div class="input-mic">
@@ -1857,6 +1955,29 @@
   </div>
   <div class="actions" id="deleteRow" style="display:none; margin-top:10px;">
     <button class="btn danger" id="deleteEvent">이 일정 삭제</button>
+  </div>
+</div>
+
+<!-- [Rev630] 월~일 순서 커스텀 달력 팝오버 (시작일·종료일 선택용) -->
+<div class="cal-pop" id="calPop" aria-hidden="true">
+  <div class="cal-box" role="dialog" aria-label="날짜 선택">
+    <div class="cal-head">
+      <button type="button" class="cal-nav" id="calPrev" aria-label="이전 달">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button type="button" class="cal-title" id="calTitle"></button>
+      <button type="button" class="cal-nav" id="calNext" aria-label="다음 달">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="cal-dow">
+      <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="csat">토</span><span class="csun">일</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-foot">
+      <button type="button" class="cal-today" id="calToday">오늘</button>
+      <button type="button" class="cal-cancel" id="calCancel">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -2393,6 +2514,89 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 const KMONTH = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 const KDOW = ['일','월','화','수','목','금','토'];
 
+/* ===== [Rev630] 시작일·종료일 커스텀 달력 (월~일 순서) =====
+   OS 기본 date 위젯은 요일 순서(일~토)를 바꿀 수 없어, 값은 hidden input
+   (#fStart/#fEnd)에 ISO로 그대로 저장하고 화면 표시·선택만 커스텀 달력이 맡는다.
+   기존 openEdit/saveEvent/syncWeekendRule 등은 여전히 .value(ISO)만 읽고 쓰므로
+   로직 변경 없이 동작한다. */
+
+// ISO(yyyy-mm-dd) → 표시용 'yyyy. mm. dd.' (기존 OS 위젯과 동일 형식)
+function fmtDateField(isoStr) {
+  if (!isoStr) return '';
+  const [y, m, d] = isoStr.split('-');
+  return y + '. ' + m + '. ' + d + '.';
+}
+// hidden input 값 세팅 + 버튼 표시 갱신을 한 번에. (기존 코드의 .value 직접대입 대체)
+function setDateField(id, isoStr) {
+  const inp = $(id);
+  inp.value = isoStr || '';
+  const btn = document.querySelector('.date-field[data-target="' + id + '"]');
+  if (btn) btn.querySelector('.date-txt').textContent = fmtDateField(isoStr);
+}
+
+let _calTargetId = null;   // 지금 편집 중인 대상 hidden input id ('fStart' | 'fEnd')
+let _calView = null;       // 팝오버에 표시 중인 달(1일로 정규화된 Date)
+
+function openCalPop(targetId) {
+  _calTargetId = targetId;
+  const cur = $(targetId).value;
+  const base = cur ? parse(cur) : new Date();
+  _calView = new Date(base.getFullYear(), base.getMonth(), 1);
+  renderCalPop();
+  $('calPop').classList.add('open');
+  $('calPop').setAttribute('aria-hidden', 'false');
+}
+function closeCalPop() {
+  $('calPop').classList.remove('open');
+  $('calPop').setAttribute('aria-hidden', 'true');
+  _calTargetId = null;
+}
+function calPopOpen() { return $('calPop').classList.contains('open'); }
+
+function renderCalPop() {
+  const y = _calView.getFullYear(), m = _calView.getMonth();
+  $('calTitle').textContent = y + '년 ' + KMONTH[m];
+  const grid = $('calGrid');
+  grid.innerHTML = '';
+  const first = new Date(y, m, 1);
+  // 월요일 시작으로 맞춘 앞쪽 빈칸 수: 일요일(0)→6, 월(1)→0 ... 토(6)→5
+  const lead = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const selIso = _calTargetId ? $(_calTargetId).value : '';
+  const todayIso = iso(new Date());
+  for (let i = 0; i < lead; i++) {
+    const c = document.createElement('div');
+    c.className = 'cal-cell empty';
+    grid.appendChild(c);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(y, m, d);
+    const dIso = iso(date);
+    const dow = date.getDay();
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cal-cell';
+    btn.textContent = d;
+    if (dow === 6) btn.classList.add('sat');
+    if (dow === 0) btn.classList.add('sun');
+    if (holidayName(date)) btn.classList.add('holi');
+    if (dIso === todayIso) btn.classList.add('today');
+    if (dIso === selIso) btn.classList.add('sel');
+    btn.onclick = () => {
+      setDateField(_calTargetId, dIso);
+      // 기존 onchange 규칙 재사용 (주말 업무 차단 / 배경색 활성화)
+      if (_calTargetId === 'fStart') syncWeekendRule();
+      else if (_calTargetId === 'fEnd') syncColorsEnabled();
+      closeCalPop();
+    };
+    grid.appendChild(btn);
+  }
+}
+function calShift(delta) {
+  _calView = new Date(_calView.getFullYear(), _calView.getMonth() + delta, 1);
+  renderCalPop();
+}
+
 // [Rev622] 대한민국 공휴일 — 2026~2031 (6년치).
 // 정책: 규칙으로 미리 확정되는 '본 공휴일'만 수록한다.
 //   · 양력 고정 공휴일은 매년 같으므로 FIXED_HOLIDAYS 한 곳에서 처리.
@@ -2925,8 +3129,8 @@ function openEdit(e, fromSearch) {
     editingId = e.id;
     $('editTitle').textContent = '일정 수정';
     $('fTitle').value = e.title;
-    $('fStart').value = e.start;
-    $('fEnd').value = e.end;
+    setDateField('fStart', e.start);
+    setDateField('fEnd', e.end);
     $('fMemo').value = e.memo || '';
     selectedType = e.type || 'work';
     selectedBg = (typeof e.bg === 'number') ? e.bg : 0;
@@ -2936,8 +3140,8 @@ function openEdit(e, fromSearch) {
     $('editTitle').textContent = '새 일정';
     const base = lastSelectedDate ? iso(lastSelectedDate) : iso(new Date());
     $('fTitle').value = '';
-    $('fStart').value = base;
-    $('fEnd').value = base;
+    setDateField('fStart', base);
+    setDateField('fEnd', base);
     $('fMemo').value = '';
     selectedType = 'work';
     selectedBg = pickUnusedBg(base); // 그 달에 안 쓰인 색을 기본값으로
@@ -3199,8 +3403,19 @@ $('holidayToggle').onclick = () => {
 syncHolidayToggle();
 $('cancelEdit').onclick = () => closeSheet('editSheet');
 $('saveEdit').onclick = saveEvent;
-$('fStart').onchange = syncWeekendRule;
-$('fEnd').onchange = syncColorsEnabled;
+// [Rev630] 날짜 필드 → 커스텀 달력 팝오버
+$('fStartBtn').onclick = () => openCalPop('fStart');
+$('fEndBtn').onclick = () => openCalPop('fEnd');
+$('calPrev').onclick = () => calShift(-1);
+$('calNext').onclick = () => calShift(1);
+$('calToday').onclick = () => {
+  const t = new Date();
+  _calView = new Date(t.getFullYear(), t.getMonth(), 1);
+  renderCalPop();
+};
+$('calCancel').onclick = closeCalPop;
+// 바깥(어둡게 깔린 배경) 탭하면 닫기 — 달력 박스 안 클릭은 유지
+$('calPop').onclick = (ev) => { if (ev.target === $('calPop')) closeCalPop(); };
 $('deleteEvent').onclick = deleteEvent;
 $('scrim').onclick = closeAll;
 document.querySelectorAll('#colors .sw').forEach(sw => {
@@ -4094,6 +4309,8 @@ const NAV_CLOSERS = {
    반환값: true = 우리가 처리함(닫을 게 있었음), false = 처리할 것 없음(일정표).
    ── 키보드가 떠 있으면 키보드만 내리고 처리한 것으로 본다(창은 유지). */
 function _handleBack() {
+  // [Rev630] 날짜 커스텀 달력 팝오버가 떠 있으면 그것부터 닫는다(창은 유지).
+  if (calPopOpen()) { closeCalPop(); return true; }
   // 키보드(입력칸 포커스)가 떠 있으면 그것부터 내린다 — 창은 그대로 뷰어.
   if (_isFieldFocused()) {
     document.activeElement.blur();
@@ -4133,6 +4350,13 @@ function _handleBack() {
     window.addEventListener('popstate', () => {
       // 우리가 직접 되감아 발생한 popstate면 그 수만큼 흘려보낸다.
       if (_navSuppress > 0) { _navSuppress--; return; }
+      // [Rev630] 날짜 팝오버가 떠 있으면 그것부터 닫고, history는 다시 채워
+      // 다음 뒤로가기가 창을 닫도록 한다(팝오버는 스택에 없으므로).
+      if (calPopOpen()) {
+        closeCalPop();
+        history.pushState({ nav: navStack.length }, '');
+        return;
+      }
       // 키보드가 떠 있으면 키보드만 내리고, history는 한 칸 다시 채워
       // 다음 뒤로가기가 창을 닫도록 한다.
       if (_isFieldFocused()) {
