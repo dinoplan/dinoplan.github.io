@@ -2,7 +2,29 @@
 <!--
   업무 캘린더 (Work Calendar)
   ============================================
-  Release Version 6.30  ·  파일명: Index_Rev630
+  Release Version 6.31  ·  파일명: Index_Rev631
+  ============================================
+  [Rev631 변경점 — 메모 저장을 '무조건 저장'으로 단순화 (변경 판정 제거)]
+    · 증상: PC에서 메모를 수정하고 '닫기'를 눌렀는데 수정 이력에도 안 남고
+      모바일에도 반영되지 않는 데이터 손실이 재발.
+    · 원인(구조): 닫을 때 스냅샷(_memoOpenSnapshot)과 비교해 '바뀌었을 때만'
+      저장·이력을 남기는 변경 판정(changed/isDirty)이 있었고, 여기에 로그인 직후
+      클라우드 저장을 보류하는 입구 가드(_cloudMemoLoaded)가 겹쳐, 특정 타이밍에
+      저장이 조용히 누락될 수 있었다.
+    · 정책 변경: 판단 루틴을 전부 제거. 메모장에 들어왔다 나가면 내용이 같든
+      다르든 '무조건' 본문 저장 + 이력 1개 적립 + 클라우드 push.
+    · 구현:
+      - _memoOpenSnapshot 변수와 changed/isDirty 변경 판정 완전 삭제.
+      - _bareCloseMemo: 무조건 memoText 반영 → 무조건 memoHistory.unshift →
+        로컬 저장 → cloudSaveMemo(…, force=true)로 무조건 push.
+      - cloudSaveMemo(memo, memoHist, force): force=true면 _cloudMemoLoaded
+        가드를 건너뛴다. 사용자가 직접 닫은 명시적 저장만 무조건 올리고,
+        자동 배경 저장(import·레거시)은 종전대로 가드 유지.
+      - onCloudMemoData: 메모장이 열려 있으면(panelOpen) 본문·화면을 건드리지
+        않고, 닫혀 있을 때만 서버 최신을 로컬에 반영. 히스토리는 항상 반영.
+    · 이력 상한: 최신순 500개 유지(판단 아님, 단순 상한). 이 상한을 사용자가
+      알 수 있도록 '메모 수정 이력' → '메모 수정 이력 (최대 500개)'로 라벨 변경.
+    · 사용자 표기 버전(v1.0.0)은 유지, 내부 리비전만 Rev631로 올림.
   ============================================
   [Rev630 변경점 — 시작일·종료일을 월~일 순서 커스텀 달력으로]
     · 증상: 일정 추가/수정의 시작일·종료일이 OS 기본 date 위젯이라, 탭하면
@@ -21,7 +43,15 @@
     · 뒤로가기: 팝오버는 nav 스택에 태우지 않는 가벼운 오버레이라, _handleBack
       과 웹 popstate 진입부에서 팝오버가 열려 있으면 그것부터 닫도록 처리(웹은
       history 한 칸 재푸시로 스택 정합성 유지). 바깥 배경 탭·'닫기'로도 닫힘.
-    · 설정창 버전 표기 Ver.629→630 갱신.
+    · 설정창 버전 표기: 정식 출시에 맞춰 '공휴일 2026~2031 반영 · Ver.630'
+      → 'v1.0.0'으로 변경(사용자에게 보이는 표기). 내부 리비전은 Rev630 유지.
+    · [사용성] 설정창 하단 PC 웹 안내 아래에 '📝 메모장 · 화면을 왼쪽으로
+      끌어서 열기' 표시 전용 배지 추가. 오른쪽에 숨은 메모장을 왼쪽 드래그
+      (openMemo, dx<0)로 여는 제스처를 모르는 사용자를 위한 안내.
+    · [출시 준비] 실광고 ID 적용(ca-app-pub-7403189096825800/8709130614) +
+      isTesting:false. 개발용 [10탭 프리미엄 토글] 블록 제거. 구독(RevenueCat)은
+      RC_API_KEY 공란 유지로 이번 출시엔 비활성. ⚠️ 빌드 전 android/app/
+      build.gradle 의 versionCode를 3으로 올릴 것(안 올리면 업로드 거부).
   ============================================
   [Rev623 변경점 — 일정·메모 내보내기를 앱에서도 동작하게]
     · 증상: 기존 exportBackup은 Blob + <a download> 방식이라 웹/PC 브라우저
@@ -1557,11 +1587,14 @@
                                     // (받기 전엔 빈 메모를 절대 올리지 않음 — 첫 로그인 덮어쓰기 방지)
 
   // 메모 본문/이력을 내 칸에 저장 (events는 손대지 않음 — merge)
-  window.cloudSaveMemo = async function(memo, memoHist) {
+  window.cloudSaveMemo = async function(memo, memoHist, force) {
     if (!currentUser) return;
     // [Rev610] 입구 잠그기: 클라우드를 아직 한 번도 못 받았으면 저장 보류.
     // "읽기 먼저, 쓰기 나중" — 새 기기 첫 로그인 때 빈 메모가 기존 데이터를 덮는 사고 차단.
-    if (!_cloudMemoLoaded) return;
+    // [Rev631] 단, force=true(사용자가 메모장을 직접 닫아 저장)면 가드를 건너뛴다.
+    //   자동 배경 push는 종전대로 가드 유지, 명시적 닫기 저장만 무조건 올린다
+    //   → "PC 로컬엔 남았는데 모바일엔 안 감"(로그인 직후 push 보류) 재발 방지.
+    if (!_cloudMemoLoaded && !force) return;
     try {
       const payload = { memo, memoHist, memoAt: Date.now() };
       _lastPushedMemoJson = JSON.stringify({ memo, memoHist });
@@ -1808,7 +1841,7 @@
 
 <!-- ===== 메모 수정 이력 (전체 큰 창) ===== -->
 <div id="memoHistory">
-  <div class="mh-head"><h2>메모 수정 이력</h2></div>
+  <div class="mh-head"><h2>메모 수정 이력 (최대 500개)</h2></div>
   <div class="mh-list" id="memoHistoryList"></div>
   <div class="mh-foot">
     <button type="button" class="btn primary" id="memoHistoryClose">닫기</button>
@@ -1873,7 +1906,13 @@
     <span style="font-weight:700;">🖥️ PC 웹</span>
     <span style="font-family:inherit; font-weight:600; color:var(--text); background:var(--surface); border:0.5px solid var(--line-strong); border-radius:8px; padding:5px 10px; letter-spacing:0.2px;">dinoplan.github.io</span>
   </div>
-  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">공휴일 2026~2031 반영 · Ver.630</div>
+  <!-- [Rev630] 숨은 제스처 안내 — 메모장은 화면을 왼쪽으로 끌면(dx<0) 열린다.
+       이 동작을 모르는 사용자가 많아 PC 웹 안내와 같은 배지 스타일로 표시 전용 안내 추가. -->
+  <div style="margin-top:10px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-2);">
+    <span style="font-weight:700;">📝 메모장</span>
+    <span style="font-family:inherit; font-weight:600; color:var(--text); background:var(--surface); border:0.5px solid var(--line-strong); border-radius:8px; padding:5px 10px; letter-spacing:0.2px;">화면을 왼쪽으로 끌어서 열기</span>
+  </div>
+  <div id="verLabel" style="text-align:right; font-size:11px; opacity:0.45; margin-top:10px;">v1.0.0</div>
 </div>
 
 <!-- search result sheet -->
@@ -2069,8 +2108,8 @@ function refreshAdBar() {
   else hideAdMobBanner();
 }
 
-// ===== [AdMob] 네이티브 배너 (검증 단계: 구글 테스트 ID) =====
-// 실제 광고단위 ID(.../8709130614)는 출시 직전에만 교체한다.
+// ===== [AdMob] 네이티브 배너 (출시: 실광고 ID) =====
+// [Rev630] 실제 광고단위 ID(.../8709130614) 적용, isTesting 해제 완료.
 let _adMobShown = false;
 let _adMobInit = false;
 let _adSizeListener = null;
@@ -2097,11 +2136,11 @@ async function showAdMobBanner() {
       } catch (e) { /* 이벤트명이 다른 플러그인 버전 — 폴백 높이 사용 */ }
     }
     await AdMob.showBanner({
-      // 구글 공식 테스트 배너 ID (실광고 ID는 출시 직전 교체)
-      adId: 'ca-app-pub-3940256099942544/6300978111',
+      // [Rev630 출시] 실제 광고단위 ID로 교체, isTesting 해제
+      adId: 'ca-app-pub-7403189096825800/8709130614',
       adSize: 'ADAPTIVE_BANNER',
       position: 'BOTTOM_CENTER',
-      isTesting: true
+      isTesting: false
     });
     _adMobShown = true;
     // 이벤트가 안 와도 최소한의 여백은 확보(적응형 배너 대략 50~60px).
@@ -2380,7 +2419,7 @@ const MEMO_KEY = 'workcal.memo.v1';        // 현재 메모 본문
 const MEMO_HIST_KEY = 'workcal.memoHist.v1'; // 수정 이력 배열 [{at, text}]
 let memoText = '';
 let memoHistory = [];
-let _memoOpenSnapshot = '';   // 메모장 열 때의 내용(닫을 때 변경 여부 비교용)
+// [Rev631] _memoOpenSnapshot 제거 — 닫을 때 무조건 저장이라 변경 판정 기준이 필요 없다.
 
 function loadMemo() {
   try { memoText = localStorage.getItem(MEMO_KEY) || ''; } catch(e) { memoText = ''; }
@@ -2423,9 +2462,8 @@ async function openMemo() {
     } catch (e) { /* 무시: 기존 memoText 유지 */ }
   }
 
-  // 단일 루트: 화면은 항상 memoText를 뿌리고, 스냅샷도 그 값으로 잡는다.
+  // [Rev631] 화면은 항상 memoText를 뿌린다. (스냅샷 변경판정 제거 — 닫을 때 무조건 저장)
   ta.value = memoText;
-  _memoOpenSnapshot = memoText;   // 닫을 때 변경판정 기준(채운 값 기준이어야 안전)
 
   // 상단 가운데 오늘 날짜·요일
   const wd = ['일','월','화','수','목','금','토'];
@@ -2442,18 +2480,20 @@ async function openMemo() {
 function _bareCloseMemo() {
   const ta = $('memoText');
   const now = ta.value;
-  const changed = (now !== _memoOpenSnapshot);
+  // [Rev631] 무조건 저장 정책: 변경 여부를 판단하지 않는다.
+  //  · 메모장에 들어왔다 나가면 내용이 같든 다르든 무조건 본문 저장 + 이력 1개 적립.
+  //  · 스냅샷(_memoOpenSnapshot) 기반 변경 판정(changed/isDirty)은 전부 제거.
+  //  · 이력은 최신순 unshift, 최대 500개 상한만 유지(판단 아님, 단순 상한).
+  //  · 클라우드 저장은 force=true 로 입구 가드(_cloudMemoLoaded)를 건너뛴다.
+  //    (사용자가 직접 닫은 명시적 저장이므로 로그인 직후에도 반드시 올린다.)
   memoText = now;
-  if (changed) {
-    memoHistory.unshift({ at: Date.now(), text: now });
-    if (memoHistory.length > 500) memoHistory.length = 500;
-  }
+  memoHistory.unshift({ at: Date.now(), text: now });
+  if (memoHistory.length > 500) memoHistory.length = 500;
   try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
-  if (changed) { try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {} }
+  try { localStorage.setItem(MEMO_HIST_KEY, JSON.stringify(memoHistory)); } catch(e) {}
   if (window.cloudReady && typeof window.cloudSaveMemo === 'function') {
-    window.cloudSaveMemo(memoText, memoHistory);
+    window.cloudSaveMemo(memoText, memoHistory, true);   // force: 가드 무시하고 무조건 push
   }
-  _memoOpenSnapshot = now;
   $('memoPanel').classList.remove('open');
   ta.blur();
   if (!document.querySelector('.sheet.open, .picker.open, #memoHistory.open')) unlockBack();
@@ -3910,31 +3950,7 @@ if ($('couponInput')) $('couponInput').addEventListener('keydown', (e) => { if (
 // [Rev619] 구독 버튼 + 구매 복원 버튼
 if ($('subscribeBtn')) $('subscribeBtn').onclick = startSubscription;
 if ($('restoreBtn')) $('restoreBtn').onclick = restoreSubscription;
-/* ===== [개발용 광고토글] 버전 10번 연속 탭 → 프리미엄 해제(광고 켜기) =====
-   정기결제 만료 때와 같은 경로를 미리 테스트하기 위한 것. 프리미엄을 풀면
-   배너가 다시 뜨고(--ad-h도 따라 채워짐), 쿠폰칸이 다시 보인다. 거기에
-   코드를 넣어 다시 프리미엄으로 만드는 확인을 반복할 수 있다. push=false라
-   클라우드엔 안 올려 다른 기기엔 영향 없음. 배포 시 이 블록만 지우면 된다. */
-(function () {
-  const label = $('verLabel');
-  if (!label) return;
-  let taps = 0, timer = null;
-  label.style.cursor = 'pointer';
-  label.addEventListener('click', () => {
-    taps++;
-    clearTimeout(timer);
-    timer = setTimeout(() => { taps = 0; }, 1200);   // 1.2초 안에 연속 탭해야 누적
-    if (taps >= 10) {
-      taps = 0;
-      // [Rev616] 정기결제 만료를 흉내낸다 — 로컬뿐 아니라 클라우드 프리미엄도
-      // OFF로 밀어야(push=true) 동기화(onCloudPremium)가 다시 켜지 않는다.
-      // (push=false였던 Rev614~615에선 클라우드에 ON이 남아 다시 켜졌음)
-      applyPremium(false, true);
-      showToast('[개발용] 정기결제 해제 흉내 · 광고가 다시 켜집니다');
-    }
-  });
-})();
-/* ===== /[개발용 광고토글] ===== */
+// [Rev630 출시] 개발용 [10탭 프리미엄 토글] 블록 제거됨 (배포본)
 // 메모장 버튼들
 $('memoBack').onclick = closeMemo;
 $('memoHistoryBtn').onclick = openMemoHistory;
@@ -4014,35 +4030,15 @@ window.onCloudMemoData = function(memo, memoHist) {
   const panelOpen = panel && panel.classList.contains('open');
   const ta = $('memoText');
 
-  // [Rev611] 본문 갱신 조건을 "메모장 열림(panelOpen)"에서
-  //          "지금 실제로 편집 중인가"로 정교화한다.
-  //  ── 배경: Rev610까지는 메모장이 떠 있기만 하면(panelOpen) 본문 갱신을
-  //     통째로 막았다. 그 결과 "메모장을 열어 가만히 보고만 있는데" 다른 기기에서
-  //     바뀐 내용이 화면에 안 들어오고, 그 상태로 메모장을 닫으면 옛 화면값이
-  //     클라우드 최신을 덮어쓰는 사고가 났다(이번에 PC에서 겪은 문제).
-  //  ── 해결: 일정(events)이 편집 폼과 분리돼 있어 뒤에서 자연 갱신되는 것처럼,
-  //     메모도 "진짜 편집 중일 때"만 본문을 보호하고, 그 외에는 갱신되게 한다.
-  //     편집 중 판정은 두 신호를 OR로 본다.
-  //       (1) isEditing — textarea에 포커스가 있음(키보드 띄우고 타이핑 중)
-  //       (2) isDirty   — 열었을 때(_memoOpenSnapshot)와 화면 내용이 달라짐
-  //                       (= 저장 안 한 내 수정이 있음. 포커스가 잠깐 빠져도 보호)
-  //     → 둘 다 아니면(닫혀 있거나, 열려도 구경만 하는 중) 서버 최신으로 갱신.
-  //     → 하나라도 참이면 본문은 안 덮고(내 글자/수정 보호), 히스토리만 받는다.
-  //     ※ 본문은 못 합치므로 충돌 시 "마지막에 저장한 쪽이 최신"은 그대로다.
-  const isEditing = panelOpen && ta && (document.activeElement === ta);
-  const isDirty   = panelOpen && ta && (ta.value !== _memoOpenSnapshot);
-  const editing   = isEditing || isDirty;
-
-  // 본문: 편집 중이 아닐 때만 갱신 (닫혀 있을 때 + 열고 구경만 할 때 포함)
-  if (!editing) {
+  // [Rev631] 스냅샷/isDirty 제거에 맞춰 단순화.
+  //  · 메모장이 열려 있으면(panelOpen) 본문·화면을 절대 건드리지 않는다.
+  //    (사용자가 보거나 쓰는 중일 수 있고, 닫을 때 무조건 저장이 최종값을 확정하므로
+  //     실시간 수신으로 화면을 바꿔 혼란을 주지 않는다 — 마지막에 닫은 쪽이 최신.)
+  //  · 메모장이 닫혀 있을 때만 서버 최신을 로컬/변수에 반영한다.
+  //  · 히스토리는 항상 반영(아래) — 다른 기기에서 쌓인 이력이 사라지지 않게.
+  if (!panelOpen) {
     memoText = (typeof memo === 'string') ? memo : '';
     try { localStorage.setItem(MEMO_KEY, memoText); } catch(e) {}
-    // 메모장이 열린 채(구경 중) 갱신된 경우 화면 textarea와 기준 스냅샷도 함께 갱신.
-    // 기준값까지 새로 잡아둬야, 이후 닫을 때 "안 고쳤는데 옛값으로 덮어쓰는" 일이 없다.
-    if (panelOpen && ta) {
-      ta.value = memoText;
-      _memoOpenSnapshot = memoText;
-    }
   }
 
   // 히스토리: 항상 갱신 (열려 있어도) — 다른 기기에서 쌓인 버전이 사라지지 않게.
